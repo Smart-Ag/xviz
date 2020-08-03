@@ -10,17 +10,18 @@ from xviz.server import XVIZServer, XVIZBaseSession
 from scenarios.circle import CircleScenario
 from scenarios.simple_tracking import SimpleTrackingScenario
 from scenarios.simple_radar import SimpleRadarScenario
+from scenarios.data_collector_tracking import DataCollectorTrackingScenario
 
 
 class ScenarioSession(XVIZBaseSession):
-    def __init__(self, socket, request, scenario=SimpleRadarScenario()):
+    def __init__(self, socket, request, scenario=DataCollectorTrackingScenario()):
         super().__init__(socket, request)
         self._scenario = scenario
         self._socket = socket
 
     def on_connect(self):
         print("Connected!")
- 
+
     def on_disconnect(self):
         print("Disconnect!")
 
