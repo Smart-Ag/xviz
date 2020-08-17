@@ -45,7 +45,7 @@ class RadarFilter:
 
         if self.pfilter_enabled:
             is_valid = self.passive_filter(target)
-        
+
         if self.qfilter_enabled:
             self.make_target_queue_if_nonexistent(target_id)
             self.update_queues(target_id, target)
@@ -118,8 +118,8 @@ class RadarFilter:
 
 class CollectorScenario:
 
-    def __init__(self, live=True, radius=30, duration=10, speed=10):
-        self._timestamp = time.time()
+    def __init__(self, live=False, radius=30, duration=10, speed=1):
+        self._timestamp = 0.0
         self._radius = radius
         self._duration = duration
         self._speed = speed
@@ -140,12 +140,14 @@ class CollectorScenario:
 
         if not collector_output_file.is_file():
             print('collector output file does not exit')
-        
+
         establish_fresh_directory(extract_directory)
 
         shutil.unpack_archive(str(collector_output_file), str(extract_directory))
 
         self.collector_outputs = sorted(extract_directory.glob('*.txt'))
+        self._duration = len(self.collector_outputs)
+        print("self.duration:", self._duration)
 
         global_config = self.load_config(configfile="../../Global-Configs/Tractors/John-Deere/8RIVT_WHEEL.yaml")
         radar_safety_config = global_config['safety']['radar']
@@ -197,7 +199,7 @@ class CollectorScenario:
                 .stream_style({'fill_color': [200, 0, 70, 128]})\
                 .category(xviz.CATEGORY.PRIMITIVE)\
                 .type(xviz.PRIMITIVE_TYPES.CIRCLE)
-                
+
             builder.stream("/combine_position")\
                 .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
                 .stream_style({'fill_color': [200, 0, 70, 128]})\
@@ -421,7 +423,7 @@ class CollectorScenario:
         except Exception as e:
             print('Crashed in draw camera targets:', e)
 
-    
+
     def _draw_combine_position(self, machine_state, builder: xviz.XVIZBuilder):
         try:
             vehicle_states = machine_state['vehicleStates']
@@ -440,7 +442,8 @@ class CollectorScenario:
                 builder.primitive('/combine_position').circle([x, y, z], .5)\
                         .style({'fill_color': fill_color})\
                         .id('combine')
-                builder.primitive('/combine_region').circle([x, y, z], self.combine_length).id("combine_bubble: " + str(self.combine_length))
+                builder.primitive('/combine_region')\
+                    .circle([x, y, z], self.combine_length).id("combine_bubble: " + str(self.combine_length))
 
         except Exception as e:
             print('Crashed in draw combine position:', e)

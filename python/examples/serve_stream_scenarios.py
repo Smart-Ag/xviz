@@ -30,6 +30,7 @@ class ScenarioSession(XVIZBaseSession):
         s = 0.001
         while True:
             try:
+                #print("_request:", self._request)
                 message = self._scenario.get_message(t)
                 await self._socket.send(json.dumps(message))
 
