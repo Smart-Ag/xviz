@@ -228,6 +228,20 @@ class CollectorScenario:
                 .text("T speed: " + str(round(tractor_speed, 3)))\
                 .position([-self.tractor_gps_to_rear_axle-10, 10., 1.])\
                 .id('tractor speed')
+
+                wheel_angle = get_wheel_angle(
+                    tractor_state['curvature'] * 1000 * 1000,
+                    self.global_config['guidance']['wheel_base'],
+                )
+
+                # Curvature = YawRate/Velocity
+
+
+                builder.primitive('/tractor_curv')\
+                .text("T curv: " + str(round(wheel_angle, 3)))\
+                .position([-self.tractor_gps_to_rear_axle+10, 10., 1.])\
+                .id('tractor curv')
+
             else:
                 builder.pose("/vehicle_pose")\
                     .timestamp(timestamp)\
@@ -276,9 +290,9 @@ class CollectorScenario:
                 conglomerate = imgs[0][1]  # primary cam image
                 if camera_output is not None:
                     conglomerate = postprocess(conglomerate, camera_output)
-                if len(imgs) > 1:
-                    for _cam_index, img in imgs[1:]:
-                        conglomerate = np.vstack((conglomerate, img))
+                # if len(imgs) > 1:
+                #     for _cam_index, img in imgs[1:]:
+                #         conglomerate = np.vstack((conglomerate, img))
                 show_image(conglomerate)
 
             # if self.index == 0:
@@ -497,14 +511,35 @@ class CollectorScenario:
             veh_speed = max(tractor_state['speed'], 0.447 * 1.0)
             #print("tractor_state:", tractor_state)
 
+            # if len(self.utm_zone) > 1:
+            #     tractor_x, tractor_y = lonlat_to_utm(tractor_state['longitude'], tractor_state['latitude'], self.utm_zone)
+            #     self.SPEEDS.append((tractor_x, tractor_y))
+
             sync_stop_threshold, waypoint_stop_threshold, \
                 sync_slowdown_threshold, _waypoint_slowdown_threshold \
                 = get_path_distances(veh_speed, self.global_config['safety'])
 
             wheel_angle = get_wheel_angle(
-                tractor_state['curvature'],
+                tractor_state['curvature'] * 1000 * 1000,
                 self.global_config['guidance']['wheel_base'],
             )
+
+
+            temp_veh_speed = max(tractor_state['speed'], .01) / 1000.0
+            print("wheel_angle:", wheel_angle)
+            cT = (tractor_state['curvature'] * 1000. * 1000.)
+
+            # Custom
+            yaw_rate_rad = (tractor_state['yawRateDeg'] * math.pi/180.)
+            cE = (yaw_rate_rad / (temp_veh_speed))
+
+            print("\tyaw_rate_rad:", yaw_rate_rad)
+            print("\tspeed km/s:", temp_veh_speed)
+            print("\t cT:", cT)
+            print("\t cE':", cE)
+            print("\t cD':", abs(cE-cT))
+            print("\t speed raw':", tractor_state['speed'])
+            print("\t yaw rate raw':", tractor_state['yawRateDeg'])
 
             self._draw_predictive_polygons(veh_speed, wheel_angle,
                 sync_stop_threshold, sync_slowdown_threshold, builder)
@@ -629,6 +664,12 @@ class CollectorScenario:
                 .text("set_speed: " + str(round(speed, 3)))\
                 .position([-self.tractor_gps_to_rear_axle-20., 10., 1.])\
                 .id('set speed')
+
+
+            builder.primitive('/set_wheel_angle')\
+                .text("set_wheel_angle: " + str(round(wheel_angle, 3)))\
+                .position([-self.tractor_gps_to_rear_axle+20., 10., 1.])\
+                .id('set wheel angle')
 
         except Exception as e:
             print('Crashed in draw control signal:', e)
