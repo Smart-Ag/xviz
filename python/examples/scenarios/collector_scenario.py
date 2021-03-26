@@ -302,6 +302,9 @@ class CollectorScenario:
             sync_status = self.sync_status
 
         try:
+
+            #print("radar_output:", radar_output)
+
             if self.radar_filter.prev_target_set is not None:
                 if self.radar_filter.prev_target_set == radar_output['targets']:
                     return
@@ -312,31 +315,57 @@ class CollectorScenario:
 
                 _phi = target['phi']
                 _dr = target['dr']
+                _z = math.sin(target['elevation']) * _dr
 
-                if self.radar_filter.is_valid_target(target, sync_status=sync_status):
-                    builder.primitive('/radar_passed_filter_targets')\
-                        .circle([x, y, z+.1], .5)\
-                        .id(str(target['targetId']))
-                else:
-                    if not target['consecutive'] < 1:
-                        builder.primitive('/radar_filtered_out_targets')\
-                            .circle([x, y, z], .5)\
-                            .id(str(target['targetId']))
-                    else:
-                        pass
+                print("phi", _phi)
+                print("_dr", _dr)
+                print("_z", _z)
 
-                if not target['consecutive'] < 1:
-                    builder.primitive('/radar_id')\
-                        .text(str(target['targetId']))\
-                        .position([x, y, z+.2])\
-                        .id(str(target['targetId']))
+                #if not target['consecutive'] < 1:
+                builder.primitive('/radar_id')\
+                    .text(str(target['targetId']))\
+                    .position([x, y, z])\
+                    .id(str(target['targetId']))
 
-            for not_received_id in self.radar_filter.target_id_set:
-                default_target = MessageToDict(
-                    radar_pb2.RadarOutput.Target(),
-                    including_default_value_fields=True
-                )
-                self.radar_filter.update_queue(not_received_id, default_target, sync_status)
+                verts = [[0, 0, 0], [4, 0, 0], [4, 3, 0]]
+                #.circle([x, y, z], .5)\
+                builder.primitive('/radar_passed_filter_targets_v2')\
+                    .polygon(verts)\
+                    .id(str(target['targetId']))
+                    # .polygon([
+                    #     [x, y, z],
+                    #     [x+5, y+5,  z],
+                    #     [x+10, y+10,  z],
+                    #     [x+15, y+15,  z]
+                    # ])\
+
+
+
+
+            #     if self.radar_filter.is_valid_target(target, sync_status=sync_status):
+            #         builder.primitive('/radar_passed_filter_targets')\
+            #             .circle([x, y, z+.1], .5)\
+            #             .id(str(target['targetId']))
+            #     else:
+            #         if not target['consecutive'] < 1:
+            #             builder.primitive('/radar_filtered_out_targets')\
+            #                 .circle([x, y, z], .5)\
+            #                 .id(str(target['targetId']))
+            #         else:
+            #             pass
+
+            #     if not target['consecutive'] < 1:
+            #         builder.primitive('/radar_id')\
+            #             .text(str(target['targetId']))\
+            #             .position([x, y, z+.2])\
+            #             .id(str(target['targetId']))
+
+            # for not_received_id in self.radar_filter.target_id_set:
+            #     default_target = MessageToDict(
+            #         radar_pb2.RadarOutput.Target(),
+            #         including_default_value_fields=True
+            #     )
+            #     self.radar_filter.update_queue(not_received_id, default_target, sync_status)
             # reset the target id set for next cycle
             self.radar_filter.target_id_set = set(range(48))
 
@@ -774,6 +803,7 @@ class CollectorScenario:
 
         if radar_ob:
             x += self.cab_to_nose
+            z = math.sin(ob['elevation']) * ob[dist_key]
 
         return (x, y, z)
 

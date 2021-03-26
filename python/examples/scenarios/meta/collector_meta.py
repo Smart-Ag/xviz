@@ -11,11 +11,20 @@ def get_builder():
         .stream_style({'fill_color': [255, 255, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/radar_passed_filter_targets")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [255, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
+
+    builder.stream("/radar_passed_filter_targets_v2")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({'fill_color': [255, 0, 0]})\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.POLYGON)
+
     builder.stream("/radar_id")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\
@@ -89,7 +98,7 @@ def get_builder():
         .stream_style({'stroke_color': [128, 0, 128, 128]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
-    
+
     builder.stream("/sync_status")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\

@@ -18,7 +18,7 @@ class ScenarioSession(XVIZBaseSession):
 
     def on_connect(self):
         print("Connected!")
- 
+
     def on_disconnect(self):
         print("Disconnect!")
 
