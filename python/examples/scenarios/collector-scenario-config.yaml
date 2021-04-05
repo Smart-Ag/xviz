@@ -1,5 +1,6 @@
-collector_output_file: /Users/azizalibasic/Desktop/important/arizona-dot/5-24-long-runs-turns/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1616545686339-5748.tar
+collector_output_file: /Users/azizalibasic/Downloads/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1616709165533-4082.tar
 extract_directory: /Users/azizalibasic/Downloads/temp/
 mqtt_enabled: False
 IVT: True
 MACHINE_TYPE: 2020_DOT_AU1_NARROW
+GUIDANCE_PATH_FILE: "/Users/azizalibasic/Documents/dev/VIZ_STACK/xviz/0_data/curvature-full.csv"

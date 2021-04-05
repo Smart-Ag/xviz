@@ -18,7 +18,7 @@ class ScenarioSession(XVIZBaseSession):
 
     def on_connect(self):
         print("Connected!")
- 
+
     def on_disconnect(self):
         print("Disconnect!")
 
@@ -36,6 +36,7 @@ class ScenarioSession(XVIZBaseSession):
                 t += 0.5
                 await asyncio.sleep(s)
             except KeyboardInterrupt:
+                self._scenario.START_WRITING = True
                 s = 0.2
 
 class ScenarioHandler:

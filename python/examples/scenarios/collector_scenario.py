@@ -4,6 +4,8 @@ from pathlib import Path
 from collections import deque
 import numpy as np
 import cv2
+import csv
+import os
 
 from google.protobuf.json_format import MessageToDict
 from protobuf_APIs import falconeye_pb2, radar_pb2
@@ -21,7 +23,12 @@ from scenarios.utils.read_protobufs import deserialize_collector_output, \
 from scenarios.safety_subsystems.radar_filter import RadarFilter
 from scenarios.safety_subsystems.path_prediction import get_path_distances, get_path_poly, predict_path
 
+from scenarios.safety_subsystems.real_path_prediction import get_rows, is_close_to_curve, get_actual_path_poly
+
 import xviz_avs as xviz
+
+CSV_FILE =  open('curvature.csv', 'w')
+WRITER = csv.writer(CSV_FILE, delimiter=',')
 
 class CollectorScenario:
 
@@ -33,9 +40,14 @@ class CollectorScenario:
         self.index = 0
         self.data = []
         self.track_history = {}
+        self.START_WRITING = True
 
         configfile = Path(__file__).parent / 'collector-scenario-config.yaml'
         collector_config = load_config(str(configfile))
+
+        self.path_ahead = get_rows(collector_config["GUIDANCE_PATH_FILE"])
+
+        print("self.path_ahead:", self.path_ahead)
 
         collector_output_file = collector_config['collector_output_file']
         extract_directory = collector_config['extract_directory']
@@ -133,6 +145,7 @@ class CollectorScenario:
             }
         except Exception as e:
             print("Crashed in get_message:", e)
+            raise e
 
 
     def _draw_measuring_references(self, builder: xviz.XVIZBuilder, timestamp):
@@ -179,13 +192,11 @@ class CollectorScenario:
 
     def _draw_collector_instance(self, builder: xviz.XVIZBuilder, timestamp):
         try:
-            if self.index == len(self.collector_instances):
+            if self.index == len(self.collector_instances) - 100:
                 print('reset')
                 self.reset_values()
                 print("#############################WE FINISHED#################################")
-                print("#############################WE FINISHED#################################")
-                print("#############################WE FINISHED#################################")
-                print("#############################WE FINISHED#################################")
+                CSV_FILE.close()
 
             collector_output = self.collector_instances[self.index]
 
@@ -230,7 +241,8 @@ class CollectorScenario:
                 .id('tractor speed')
 
                 wheel_angle = get_wheel_angle(
-                    tractor_state['curvature'] * 1000 * 1000,
+                    #tractor_state['curvature'] * 1000 * 1000,
+                    tractor_state['curvature'],
                     self.global_config['guidance']['wheel_base'],
                 )
 
@@ -295,6 +307,15 @@ class CollectorScenario:
                 #         conglomerate = np.vstack((conglomerate, img))
                 show_image(conglomerate)
 
+
+                #for _cam_index, img in imgs:
+                #    tdir = str(f"cam-{_cam_index}")
+                    #if not os.path.exists(tdir):
+                    #    os.makedirs(tdir)
+                    #out_path = os.path.join(tdir, f"{self.index}.jpeg")
+                    #t_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    #cv2.imwrite(out_path, t_img)
+
             # if self.index == 0:
             #     print('start time:', time.gmtime(float(collector_output.timestamp)))
             # elif self.index == len(self.collector_instances) - 1:
@@ -304,6 +325,7 @@ class CollectorScenario:
 
         except Exception as e:
             print('Crashed in draw collector instance:', e)
+            raise e
 
 
     def _draw_radar_targets(self, radar_output, builder: xviz.XVIZBuilder):
@@ -520,26 +542,41 @@ class CollectorScenario:
                 = get_path_distances(veh_speed, self.global_config['safety'])
 
             wheel_angle = get_wheel_angle(
-                tractor_state['curvature'] * 1000 * 1000,
+                #tractor_state['curvature'] * 1000 * 1000,
+                tractor_state['curvature'],
                 self.global_config['guidance']['wheel_base'],
             )
 
 
-            temp_veh_speed = max(tractor_state['speed'], .01) / 1000.0
-            print("wheel_angle:", wheel_angle)
-            cT = (tractor_state['curvature'] * 1000. * 1000.)
+            temp_veh_speed = max(tractor_state['speed'], .01)
+            # print("wheel_angle:", wheel_angle)
+            cT = (tractor_state['curvature'])
 
-            # Custom
-            yaw_rate_rad = (tractor_state['yawRateDeg'] * math.pi/180.)
-            cE = (yaw_rate_rad / (temp_veh_speed))
+            # # Custom
+            # yaw_rate_rad = (tractor_state['yawRateDeg'] * math.pi/180.)
+            # cE = (yaw_rate_rad / (temp_veh_speed))
 
-            print("\tyaw_rate_rad:", yaw_rate_rad)
-            print("\tspeed km/s:", temp_veh_speed)
-            print("\t cT:", cT)
-            print("\t cE':", cE)
-            print("\t cD':", abs(cE-cT))
-            print("\t speed raw':", tractor_state['speed'])
-            print("\t yaw rate raw':", tractor_state['yawRateDeg'])
+            # print("\tyaw_rate_rad:", yaw_rate_rad)
+            # print("\tspeed km/s:", temp_veh_speed)
+            # print("\t cT:", cT)
+            # print("\t cE':", cE)
+            # print("\t cD':", abs(cE-cT))
+            # print("\t speed raw':", tractor_state['speed'])
+            # print("\t yaw rate raw':", tractor_state['yawRateDeg'])
+
+            # if self.START_WRITING:
+            #     print("W+:", self.utm_zone)
+            #     tractor_x, tractor_y = lonlat_to_utm(
+            #         tractor_state['longitude'],
+            #         tractor_state['latitude'],
+            #         self.utm_zone)
+
+            #     WRITER.writerow([
+            #         cT,
+            #         wheel_angle,
+            #         temp_veh_speed,
+            #         tractor_x,
+            #         tractor_y])
 
             self._draw_predictive_polygons(veh_speed, wheel_angle,
                 sync_stop_threshold, sync_slowdown_threshold, builder)
@@ -548,6 +585,7 @@ class CollectorScenario:
 
         except Exception as e:
             print('Crashed in draw predicted paths:', e)
+            raise e
 
 
     def _draw_predictive_polygons(self, veh_speed, wheel_angle,
@@ -557,16 +595,16 @@ class CollectorScenario:
         else:
             sync_status = self.sync_status
         try:
-            stop_poly = get_path_poly(
-                veh_speed,
-                self.global_config['guidance']['wheel_base'],
-                wheel_angle,
-                self.global_config['safety']['path_widths']['narrow'],
-                stop_threshold,
-                0.,
-                0.,
-                0.,
-            )
+            # stop_poly = get_path_poly(
+            #     veh_speed,
+            #     self.global_config['guidance']['wheel_base'],
+            #     wheel_angle,
+            #     self.global_config['safety']['path_widths']['narrow'],
+            #     stop_threshold,
+            #     0.,
+            #     0.,
+            #     0.,
+            # )
             slow_poly = get_path_poly(
                 veh_speed,
                 self.global_config['guidance']['wheel_base'],
@@ -578,7 +616,15 @@ class CollectorScenario:
                 0.,
             )
 
-            predictive_polys = [stop_poly]
+            #if is_close_to_curve(self.path_ahead, i=self.index, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
+                #print("On curve using actual path wheel angle is:", wheel_angle)
+            if self.index > 0 and self.index < len(self.collector_instances)-1:
+                machine_width = self.global_config['safety']['path_widths']['narrow']
+                stop_poly = get_actual_path_poly(data=self.path_ahead, i=self.index, machine_width=machine_width, LOOK_AHEAD_METERS=10.)
+                predictive_polys = [stop_poly]
+            else:
+                predictive_polys = []
+
 
             if not sync_status['inSync']:
                 predictive_polys.append(slow_poly)
@@ -590,6 +636,7 @@ class CollectorScenario:
 
         except Exception as e:
             print('Crashed in draw predictive polygons:', e)
+            raise e
 
 
     def _draw_vision_polygons(self, veh_speed, wheel_angle, sync_stop_threshold,
