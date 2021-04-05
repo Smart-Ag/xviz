@@ -1,6 +1,8 @@
 /data
 node_modules
 dist
+python/cam-*/
+0_data/
 python/examples/scenarios/tmp/
 python/examples/scenarios/collector-scenario-config.yaml
 node_modules
