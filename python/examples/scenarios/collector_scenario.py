@@ -95,6 +95,9 @@ class CollectorScenario:
         self.index = 0
 
 
+    def count_uniques(self, arr2D):
+        return len(np.unique(arr2D, axis=0))
+
     def store_tracking_output(self, msg):
         tracking_output = falconeye_pb2.TrackingOutput()
         tracking_output.ParseFromString(msg.payload)
@@ -710,6 +713,8 @@ class CollectorScenario:
             _, tractor_state = self.tractor_state[-1]
             xy_array = utm_array_to_local(tractor_state, self.utm_zone, self.planned_path)
             z = 1.0
+
+            assert len(self.planned_path) == self.count_uniques(self.planned_path)
 
             clostest_point_ind, stop_poly = self.get_closest_point_actual_path_poly(builder)
 

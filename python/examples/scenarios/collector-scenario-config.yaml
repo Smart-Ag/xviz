@@ -1,6 +1,5 @@
-collector_output_file: /Users/azizalibasic/Downloads/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1616709165533-4082.tar
+collector_output_file: /Users/azizalibasic/Desktop/important/california-duplicate-points/failure_after_change/Estop_pressed-v2020-25-0-83dcccfd63c54194b59d9c295f103a10-smartag-autocart-1617805231238-696.tar
 extract_directory: /Users/azizalibasic/Downloads/temp/
 mqtt_enabled: False
 IVT: True
-MACHINE_TYPE: 2020_DOT_AU1_NARROW
-GUIDANCE_PATH_FILE: "/Users/azizalibasic/Documents/dev/VIZ_STACK/xviz/0_data/curvature-full.csv"
+MACHINE_TYPE: 8RIVT_WHEEL
