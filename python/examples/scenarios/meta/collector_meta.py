@@ -84,6 +84,36 @@ def get_builder():
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
 
+    builder.stream("/actual_path_ahead")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({
+            'stroke_width': 0.2,
+            'stroke_color': [0, 170, 220, 200]
+        })\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
+    builder.stream("/actual_path_behind")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({
+            'stroke_width': 0.2,
+            'stroke_color': [0, 170, 220, 200]
+        })\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
+    builder.stream("/set_wheel_angle")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({'fill_color': [0, 0, 0]})\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.TEXT)
+
+    builder.stream("/closest_point")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({'fill_color': [0, 128, 30]})\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/control_signal")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'stroke_color': [128, 0, 128, 128]})\

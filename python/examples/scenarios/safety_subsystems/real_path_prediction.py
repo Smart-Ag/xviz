@@ -4,7 +4,7 @@ import numpy as np
 from math import cos, asin, sqrt, pi,atan2, sin
 import math
 
-K_THRESH = 10.0
+K_THRESH = .1
 
 def get_heading(a, b):
     y_diff = b[1] - a[1]
@@ -33,6 +33,7 @@ def compute_curvature(a, b, c):
 
 def has_high_curvature(points, K_THRESH):
 
+    max_cur = 0
     for i in range(len(points)-2):
         a = points[i]
         b = points[i+1]
@@ -40,6 +41,9 @@ def has_high_curvature(points, K_THRESH):
         cur = abs(compute_curvature(a,b,c))
         if cur >= K_THRESH:
             return True
+
+        if cur > max_cur:
+            max_cur = cur
 
     return False
 
@@ -73,18 +77,26 @@ def get_point_until_d(points_x, points_y, i, inc, max_dist):
 
     return points_ahead
 
+def closest_node(node, nodes):
+    nodes = np.asarray(nodes)
+    dist_2 = np.sum((nodes - node)**2, axis=1)
+    return np.argmin(dist_2)
+
 def get_rows(file_name):
-    rows = []
+    try:
+        rows = []
 
-    with open(file_name, 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            rows.append([float(row[-2]), float(row[-1]), 0.0])
+        with open(file_name, 'r') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                rows.append([float(row[-2]), float(row[-1]), 0.0])
 
-    return rows
+        return rows
+    except Exception as e:
+        return None
 
 
-def is_close_to_curve(data, i, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
+def is_close_to_curve(builder, data, i, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
 
     np_data = np.array(data)
 
@@ -97,16 +109,25 @@ def is_close_to_curve(data, i, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
     points_ahead = get_point_until_d(points_x=points_x, points_y=points_y, i=i, inc=1, max_dist=LOOK_AHEAD_METERS)
     curve_ahead = has_high_curvature(points_ahead, K_THRESH)
 
-    if curve_ahead:
-        return curve_ahead
-
     points_behind = get_point_until_d(points_x=points_x, points_y=points_y, i=i, inc=-1, max_dist=LOOK_BEHIND_METERS)
     curve_behind = has_high_curvature(points_behind, K_THRESH)
+
+    if builder is not None:
+        builder.primitive('/actual_path_ahead')\
+            .polyline(np.array(points_ahead).flatten())\
+            .id('actual_path_ahead')
+
+        builder.primitive('/actual_path_behind')\
+            .polyline(np.array(points_behind).flatten())\
+            .id('actual_path_behind')
+
+    if curve_ahead:
+        return curve_ahead
 
     return curve_behind
 
 def get_actual_path(data, i, machine_width, LOOK_AHEAD_METERS=10.):
-    W_half = machine_width
+    W_half = machine_width / 2.0
 
     for j in range(len(data)-1):
         row0 = data[i]
@@ -152,7 +173,7 @@ def get_actual_path_poly(data, i, machine_width, LOOK_AHEAD_METERS=10.):
         np.full(right.shape[0], z)
     ))
 
-    return list(np.concatenate((
+    return np.concatenate((
         left.flatten(),
         right.flatten(),
-    )))
+    )).tolist()
