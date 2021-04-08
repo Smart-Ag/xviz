@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 from collections import deque, defaultdict
 import matplotlib.pyplot as plt
+from functools import lru_cache
 import numpy as np
 from google.protobuf.json_format import MessageToDict
 from protobuf_APIs import radar_pb2
@@ -423,13 +424,8 @@ def probability_of_cell_x_given_measurment_z(mean, dets):
 
     return prob_det_list
 
-def get_probailty_given_all_measurements(dets):
-    #dets - [[x, y, z, vr, dbpower, noise, rcs]]
-    grid_det_prob = {}    # result = {grid_index:{
-    # centre(c) - (x,y),
-    # probailities(p) - [0.0, .., 0.0]}}
-    # len of probailities per grid cell = len of dets
-
+@lru_cache(maxsize=500)
+def get_grid_cells():
     radial_dist_fov = range(0, 55, 5)
     azimuth_fov= list(range(-65, 70, 5))
     azimuth_fov.reverse()
@@ -444,7 +440,17 @@ def get_probailty_given_all_measurements(dets):
             grid[grid_index] = (r, (phi_left+phi_right)/2.0)
             grid_index+=1
             phi_left_key+=1
+    return grid
+
+
+def get_probailty_given_all_measurements(dets):
+    #dets - [[x, y, z, vr, dbpower, noise, rcs]]
+    grid_det_prob = {}    # result = {grid_index:{
+    # centre(c) - (x,y),
+    # probailities(p) - [0.0, .., 0.0]}}
+    # len of probailities per grid cell = len of dets
     
+    grid = get_grid_cells()
     for cell in grid.items():
         cell_id, radial_cente = cell
         cartesian_centre = polar_to_cartesian(radial_cente[1]*180/np.pi, radial_cente[0])
@@ -479,6 +485,39 @@ def get_radar_cluster_centre_and_prob(dets, grid_det_prob):
                 centre+=1.0/len(dets) *(item[1]['p'][i]*np.array(dets[i]))
     result.append((centre, total_prob))
     return result
+
+def visualize_data(display_data, heatmap_key="prob"):
+    dets = [x for x in zip(
+        display_data['x'],
+        display_data['y'],
+        display_data['z'],
+        display_data['vr'],
+        display_data['dBpower'],
+        display_data['rcs'],
+        display_data['noise'],
+    )]
+    grid_det_prob = get_probailty_given_all_measurements(dets)
+    # print ("grid_det_prob: ", grid_det_prob)
+    # print ("\n")       
+    dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+    print ("len of dets: ", len(dets))
+    print ("len of x in current frame: ", len(display_data['x']))
+    print ("len of dets_prob: ", len(dets_prob))
+    prob_det_frame = []
+    for i in dets_prob:
+        # print ("dets_prob: ", i[1])
+        prob_det_frame.append(int(i[1]*1000))
+    print ("len of prob_det_frame: ", len(prob_det_frame))
+    # print ("\n")
+    radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
+    # print ("radar_clusters_and_prob: ", radar_clusters_and_prob)
+    # print ("\n")
+    display_data['prob'] = prob_det_frame
+    print ("len of prob in current frame: ", len(display_data['prob']))
+
+    plot_3d_smartmicro(display_data, 'x', 'y', 'z', heatmap_key)
+    return
+
 
 
 def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
@@ -520,46 +559,18 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
             display_data['rcs'] += dets_t['rcs']
             display_data['noise'] += dets_t['noise']
 
-            dets = [x for x in zip(
-                display_data['x'],
-                display_data['y'],
-                display_data['z'],
-                display_data['vr'],
-                display_data['dBpower'],
-                display_data['rcs'],
-                display_data['noise'],
-            )]
-            grid_det_prob = get_probailty_given_all_measurements(dets)
-            # print ("grid_det_prob: ", grid_det_prob)
-            # print ("\n")       
-            dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
-            print ("len of dets: ", len(dets))
-            print ("len of x in current frame: ", len(display_data['x']))
-            print ("len of dets_prob: ", len(dets_prob))
-            prob_det_frame = []
-            for i in dets_prob:
-                # print ("dets_prob: ", i[1])
-                prob_det_frame.append(int(i[1]*1000))
-            print ("len of prob_det_frame: ", len(prob_det_frame))
-            # print ("\n")
-            radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
-            # print ("radar_clusters_and_prob: ", radar_clusters_and_prob)
-            # print ("\n")
-            display_data['prob'] = prob_det_frame
-            print ("len of prob in current frame: ", len(display_data['prob']))
+
 
             if (not full_duration) and key - interval_start_time_instance > time_duration:
-                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
+                visualize_data(display_data, "prob")
                 interval_start_time_instance = key
                 display_data = defaultdict(list)
-                display_data['prob'] = []
             elif frame_by_frame:
-                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
+                visualize_data(display_data, "prob")
                 display_data = defaultdict(list)
-                display_data['prob'] = []
         
         if full_duration and not frame_by_frame:
-            plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')  
+            visualize_data(display_data, "prob")  
         # plot_3d_smartmicro(targets, 'x', 'y', 'z', 'noise')
 
     else:
