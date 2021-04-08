@@ -1,4 +1,5 @@
 import argparse
+import math
 from pathlib import Path
 from collections import deque, defaultdict
 import matplotlib.pyplot as plt
@@ -56,6 +57,7 @@ def append_values_smartmicro(targets, measurement):
     targets['x'].append(x)
     targets['y'].append(y)
     targets['z'].append(z)
+    targets['vr'].append(measurement['vr'])
     targets['dBpower'].append(measurement['dBpower'])
     targets['rcs'].append(measurement['rcs'])
     targets['noise'].append(measurement['noise'])
@@ -83,6 +85,25 @@ def get_targets_smartmicro(collector_instances):
 
         for target in radar_output['targets'].values():
             append_values_smartmicro(targets, target)
+        
+    return targets
+
+
+def get_targets_smartmicro_frame_by_frame(collector_instances):
+    targets = {}
+    for collector_output in collector_instances:
+        targets_t = defaultdict(list)
+
+        collector_output, _ = deserialize_collector_output(collector_output)
+        _, radar_output, _, _, _, _, _, _, _ = extract_collector_output_slim(
+            collector_output, get_camera_data=False)
+
+        if radar_output is None:
+            continue
+
+        for target in radar_output['targets'].values():
+            append_values_smartmicro(targets_t, target)
+        targets[float(radar_output['timestamp'])] = targets_t
 
     return targets
 
@@ -344,26 +365,31 @@ def plot_3d(targets, detected_target_ids, signal_type):
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
     ax.set_zlabel('dBpower')
-
     plt.show()
     plt.close()
 
-def plot_3d_smartmicro(targets, x_key, y_key, z_key):
+def plot_3d_smartmicro(targets, x_key, y_key, z_key, heatmap_key):
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
 
-    # filter out z values below a threshold
-    idx = set(map(lambda x: x[0], filter(lambda x: x[1] > 80.,
-                                        enumerate(targets[z_key]))))
-    # idx = set(map(lambda x: x[0], filter(lambda _: True,
-    #                                     enumerate(targets[z_key]))))
+    # # filter out z values below a threshold
+    # idx = set(map(lambda x: x[0], filter(lambda x: x[1] > 80.,
+    #                                     enumerate(targets[heatmap_key]))))
+    # # idx = set(map(lambda x: x[0], filter(lambda _: True,
+    # #                                     enumerate(targets[z_key]))))
 
-    x = list(map(targets[x_key].__getitem__, idx))
-    y = list(map(targets[y_key].__getitem__, idx))
-    z = list(map(targets[z_key].__getitem__, idx))
+    # x = list(map(targets[x_key].__getitem__, idx))
+    # y = list(map(targets[y_key].__getitem__, idx))
+    # z = list(map(targets[z_key].__getitem__, idx))
+    # heat = list(map(targets[heatmap_key].__getitem__, idx))
+
+    x = targets[x_key]
+    y = targets[y_key]
+    z = targets[z_key]
+    heat = targets[heatmap_key]
 
     cm = plt.cm.get_cmap('RdYlBu')
-    im = ax.scatter(x, y, z, c=z, cmap=cm)
+    im = ax.scatter(x, y, z, c=heat, cmap=cm)
 
     fig.colorbar(im, ax=ax)
 
@@ -371,8 +397,88 @@ def plot_3d_smartmicro(targets, x_key, y_key, z_key):
     ax.set_xlabel(x_key)
     ax.set_ylabel(y_key)
     ax.set_zlabel(z_key)
+    plt.title("X-Y-Z spatial detections with heat map indicating " + heatmap_key)
     plt.show()
     plt.close()
+
+
+def normal_dist(mean, z, sd=1.0):
+    distance = math.sqrt((mean[0]-z[0])**2 + (mean[0]-z[0])**2)
+    prob = (1.0/(np.sqrt( 2*np.pi)*sd)) * np.exp(-0.5*((distance)/sd)**2)
+    return prob
+
+def probability_of_cell_x_given_measurment_z(mean, dets):
+    # mean - [x, y, z] - face of the cell
+    # measurement(z) - [[x, y, z, vr, dbpower, noise, rcs]]
+    prob_det_list = []
+    prob_z_is_valid = 0.9 # valid measurement
+    for z in dets:
+        prob_x_given_z = normal_dist(mean, (z[0], z[1]))
+        if z[3] == 0.0:
+            prob_z = 1.0 - prob_z_is_valid
+        else:
+            prob_z = prob_z_is_valid
+        # prob_det_list.append(prob_x_given_z)
+        prob_det_list.append(prob_x_given_z*prob_z)
+
+    return prob_det_list
+
+def get_probailty_given_all_measurements(dets):
+    #dets - [[x, y, z, vr, dbpower, noise, rcs]]
+    grid_det_prob = {}    # result = {grid_index:{
+    # centre(c) - (x,y),
+    # probailities(p) - [0.0, .., 0.0]}}
+    # len of probailities per grid cell = len of dets
+
+    radial_dist_fov = range(0, 55, 5)
+    azimuth_fov= list(range(-65, 70, 5))
+    azimuth_fov.reverse()
+    grid_index = 0
+    grid = {}
+    for r in radial_dist_fov:
+        phi_left_key = 0
+        while phi_left_key < len(azimuth_fov)-1:
+            phi_left = azimuth_fov[phi_left_key]
+            phi_right = azimuth_fov[phi_left_key+1]
+
+            grid[grid_index] = (r, (phi_left+phi_right)/2.0)
+            grid_index+=1
+            phi_left_key+=1
+    
+    for cell in grid.items():
+        cell_id, radial_cente = cell
+        cartesian_centre = polar_to_cartesian(radial_cente[1]*180/np.pi, radial_cente[0])
+        grid_det_prob[cell_id] = {
+            'c': cartesian_centre,
+            'p': probability_of_cell_x_given_measurment_z(cartesian_centre, dets)}
+    
+    return grid_det_prob
+
+# need to check if this is valid
+def get_prob_valid_measurment(dets, grid_det_prob):
+    result = [] 
+    #[(det, prob)]
+    for d_id in range(len(dets)):
+        temp = []
+        for item in grid_det_prob.items():
+            temp.append(item[1]['p'][d_id])
+        prob = sum(temp)/len(grid_det_prob)
+        result.append((dets[d_id], prob))
+    return result
+
+def get_radar_cluster_centre_and_prob(dets, grid_det_prob):
+    result = []
+    centre = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    for item in grid_det_prob.items():
+        cell_id = item[0]
+        assert len(item[1]['p']) == len(dets)
+        total_prob = sum(item[1]['p'])/len(dets)
+        if total_prob > 1.0/len(dets):
+            # get the cluster cente by taking a weighted average
+            for i in range(len(dets)):
+                centre+=1.0/len(dets) *(item[1]['p'][i]*np.array(dets[i]))
+    result.append((centre, total_prob))
+    return result
 
 
 def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
@@ -392,11 +498,69 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
     # radar_safety_config['phi_sdv_threshold'] = 0.015
     # radar_safety_config['confidence_threshold'] = 0.65
 
+    full_duration = True
+    time_duration = 5 #s
+    frame_by_frame = False
+
     if is_smartmicro:
-        targets = get_targets_smartmicro(collector_instances)
-        # plot_3d_smartmicro(targets, 'x', 'y', 'rcs')
-        plot_3d_smartmicro(targets, 'x', 'y', 'dBpower')
-        # plot_3d_smartmicro(targets, 'x', 'y', 'noise')
+        # targets = get_targets_smartmicro(collector_instances)
+        targets = get_targets_smartmicro_frame_by_frame(collector_instances)
+        listed_keys = list(targets.keys())
+        listed_keys_sorted = sorted(listed_keys)
+        # plot_3d_smartmicro(targets, 'x', 'y', 'z', 'rcs')
+        interval_start_time_instance = listed_keys_sorted[0]
+        display_data = defaultdict(list)
+        for key in listed_keys_sorted:
+            dets_t = targets[key]            
+            display_data['x']+= dets_t['x']
+            display_data['y'] += dets_t['y']
+            display_data['z'] += dets_t['z']
+            display_data['vr'] += dets_t['vr']
+            display_data['dBpower'] += dets_t['dBpower']
+            display_data['rcs'] += dets_t['rcs']
+            display_data['noise'] += dets_t['noise']
+
+            dets = [x for x in zip(
+                display_data['x'],
+                display_data['y'],
+                display_data['z'],
+                display_data['vr'],
+                display_data['dBpower'],
+                display_data['rcs'],
+                display_data['noise'],
+            )]
+            grid_det_prob = get_probailty_given_all_measurements(dets)
+            # print ("grid_det_prob: ", grid_det_prob)
+            # print ("\n")       
+            dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+            print ("len of dets: ", len(dets))
+            print ("len of x in current frame: ", len(display_data['x']))
+            print ("len of dets_prob: ", len(dets_prob))
+            prob_det_frame = []
+            for i in dets_prob:
+                # print ("dets_prob: ", i[1])
+                prob_det_frame.append(int(i[1]*1000))
+            print ("len of prob_det_frame: ", len(prob_det_frame))
+            # print ("\n")
+            radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
+            # print ("radar_clusters_and_prob: ", radar_clusters_and_prob)
+            # print ("\n")
+            display_data['prob'] = prob_det_frame
+            print ("len of prob in current frame: ", len(display_data['prob']))
+
+            if (not full_duration) and key - interval_start_time_instance > time_duration:
+                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
+                interval_start_time_instance = key
+                display_data = defaultdict(list)
+                display_data['prob'] = []
+            elif frame_by_frame:
+                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
+                display_data = defaultdict(list)
+                display_data['prob'] = []
+        
+        if full_duration and not frame_by_frame:
+            plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')  
+        # plot_3d_smartmicro(targets, 'x', 'y', 'z', 'noise')
 
     else:
         radar_filter = RadarFilter(radar_safety_config)
@@ -417,7 +581,7 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
                       selected_timespan, tgt_id_tspans)
 
         # plot_3d(targets, detected_target_ids, 'raw')
-
+    
 
 if __name__ == '__main__':
     plt.rcParams['figure.figsize'] = [16, 10]
