@@ -1,4 +1,5 @@
 import argparse
+import copy
 import math
 from pathlib import Path
 from collections import deque, defaultdict
@@ -402,6 +403,33 @@ def plot_3d_smartmicro(targets, x_key, y_key, z_key, heatmap_key):
     plt.show()
     plt.close()
 
+def plot_cluster_centre_and_prob(data):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    x = []
+    y = []
+    z = []
+    heat = []
+    print (data)
+    for cntr in data:
+        x.append(cntr[0][0])
+        y.append(cntr[0][1])
+        z.append(cntr[0][2])
+        heat.append(int(cntr[1]*1000))
+    
+    cm = plt.cm.get_cmap('RdYlBu')
+    im = ax.scatter(x, y, z, c=heat, cmap=cm)
+
+    fig.colorbar(im, ax=ax)
+
+    ax.view_init(0, 45)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    plt.title("X-Y-Z spatial centers with heat map indicating a cluster represents a valid object")
+    plt.show()
+    plt.close()
+
 
 def normal_dist(mean, z, sd=1.0):
     distance = math.sqrt((mean[0]-z[0])**2 + (mean[0]-z[0])**2)
@@ -474,19 +502,20 @@ def get_prob_valid_measurment(dets, grid_det_prob):
 
 def get_radar_cluster_centre_and_prob(dets, grid_det_prob):
     result = []
-    centre = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     for item in grid_det_prob.items():
-        cell_id = item[0]
+        centre = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         assert len(item[1]['p']) == len(dets)
         total_prob = sum(item[1]['p'])/len(dets)
-        if total_prob > 1.0/len(dets):
-            # get the cluster cente by taking a weighted average
-            for i in range(len(dets)):
-                centre+=1.0/len(dets) *(item[1]['p'][i]*np.array(dets[i]))
-    result.append((centre, total_prob))
+        # if total_prob > 1.0/len(dets): # need to determine this threshold
+        #     # get the cluster cente by taking a weighted average
+        for i in range(len(dets)):
+            centre+=((item[1]['p'][i]/sum(item[1]['p']))*np.array(dets[i])) #*1.0/len(dets)
+        result.append((centre, total_prob))
     return result
 
 def visualize_data(display_data, heatmap_key="prob"):
+    # recalculate detections probabilties using all the detections given untill now
+    temp = display_data["prob"].copy()
     dets = [x for x in zip(
         display_data['x'],
         display_data['y'],
@@ -509,12 +538,10 @@ def visualize_data(display_data, heatmap_key="prob"):
         prob_det_frame.append(int(i[1]*1000))
     print ("len of prob_det_frame: ", len(prob_det_frame))
     # print ("\n")
-    radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
-    # print ("radar_clusters_and_prob: ", radar_clusters_and_prob)
-    # print ("\n")
     display_data['prob'] = prob_det_frame
     print ("len of prob in current frame: ", len(display_data['prob']))
 
+    print ("are the instantaneous det prob == det prob when determined over the trajectory: ", temp == display_data["prob"])
     plot_3d_smartmicro(display_data, 'x', 'y', 'z', heatmap_key)
     return
 
@@ -559,18 +586,51 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
             display_data['rcs'] += dets_t['rcs']
             display_data['noise'] += dets_t['noise']
 
+            # display_data - contains all detections unitll now
+            # dets_t - instantaneous detections 
+            dets = [x for x in zip(
+                dets_t['x'],
+                dets_t['y'],
+                dets_t['z'],
+                dets_t['vr'],
+                dets_t['dBpower'],
+                dets_t['rcs'],
+                dets_t['noise'],
+            )]
+            grid_det_prob = get_probailty_given_all_measurements(dets)
+            # print ("\n")       
+            dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+            print ("len of dets: ", len(dets))
+            prob_det_frame = []
+            for i in dets_prob:
+                # print ("dets_prob: ", i[1])
+                prob_det_frame.append(int(i[1]*1000))
+            # print ("\n")
 
+            #need to look into this
+            # radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
+            display_data['prob'] += prob_det_frame
 
             if (not full_duration) and key - interval_start_time_instance > time_duration:
-                visualize_data(display_data, "prob")
+                # use all detections from the entire trajectory
+                # visualize_data(display_data, heatmap_key="prob")
+
+                # instantaneous inference
+                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
+
                 interval_start_time_instance = key
                 display_data = defaultdict(list)
             elif frame_by_frame:
-                visualize_data(display_data, "prob")
+                # instantaneous inference
+                plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')
                 display_data = defaultdict(list)
         
         if full_duration and not frame_by_frame:
-            visualize_data(display_data, "prob")  
+            # use all detections from the entire trajectory
+            visualize_data(display_data, heatmap_key="prob")
+
+            # instantaneous inference
+            # plot_3d_smartmicro(display_data, 'x', 'y', 'z', 'prob')  
         # plot_3d_smartmicro(targets, 'x', 'y', 'z', 'noise')
 
     else:
