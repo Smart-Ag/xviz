@@ -410,7 +410,7 @@ def plot_cluster_centre_and_prob(data):
     y = []
     z = []
     heat = []
-    print (data)
+    # print (data)
     for cntr in data:
         x.append(cntr[0][0])
         y.append(cntr[0][1])
@@ -434,13 +434,20 @@ def plot_cluster_centre_and_prob(data):
 def normal_dist(mean, z, sd=1.0):
     distance = math.sqrt((mean[0]-z[0])**2 + (mean[0]-z[0])**2)
     prob = (1.0/(np.sqrt( 2*np.pi)*sd)) * np.exp(-0.5*((distance)/sd)**2)
-    return prob
+    return prob 
 
-def probability_of_cell_x_given_measurment_z(mean, dets):
+
+def probability_of_cell_x_given_measurment_z(mean, dets, radius):
     # mean - [x, y, z] - face of the cell
     # measurement(z) - [[x, y, z, vr, dbpower, noise, rcs]]
     prob_det_list = []
-    prob_z_is_valid = 0.9 # valid measurement
+    prob_x_given_z_list = []
+    prob_z_list = []
+    length_cell_face = 5*np.pi/180 * radius
+    det_within_cell = []
+
+
+    prob_z_is_valid = 0.8 # valid measurement
     for z in dets:
         prob_x_given_z = normal_dist(mean, (z[0], z[1]))
         if z[3] == 0.0:
@@ -448,9 +455,18 @@ def probability_of_cell_x_given_measurment_z(mean, dets):
         else:
             prob_z = prob_z_is_valid
         # prob_det_list.append(prob_x_given_z)
+        prob_x_given_z_list.append(prob_x_given_z)
+        prob_z_list.append(prob_z)
         prob_det_list.append(prob_x_given_z*prob_z)
+        
+        # radial expanion of th cell face
+        distance = math.sqrt((mean[0]-z[0])**2 + (mean[0]-z[0])**2)
+        det_within_cell.append(distance < length_cell_face)
+        # ideally should have been a 2sigma or 3 sigma density setup
+        # assume the the length of cell face is 3sgima, with varying sigma for each cell
+    
+    return prob_det_list, prob_x_given_z_list, prob_z_list, det_within_cell
 
-    return prob_det_list
 
 @lru_cache(maxsize=500)
 def get_grid_cells():
@@ -477,16 +493,28 @@ def get_probailty_given_all_measurements(dets):
     # centre(c) - (x,y),
     # probailities(p) - [0.0, .., 0.0]}}
     # len of probailities per grid cell = len of dets
+    prob_x_given_z_grid = []
+    prob_z_grid = []
+    det_within_cell_grid = []
+
     
     grid = get_grid_cells()
     for cell in grid.items():
         cell_id, radial_cente = cell
-        cartesian_centre = polar_to_cartesian(radial_cente[1]*180/np.pi, radial_cente[0])
+        cartesian_centre = polar_to_cartesian(radial_cente[1]*np.pi/180, radial_cente[0])
+        prob_det_list, prob_x_given_z_list, prob_z_list, det_within_cell = \
+            probability_of_cell_x_given_measurment_z(cartesian_centre, dets, radial_cente[0])
         grid_det_prob[cell_id] = {
             'c': cartesian_centre,
-            'p': probability_of_cell_x_given_measurment_z(cartesian_centre, dets)}
-    
-    return grid_det_prob
+            'p': prob_det_list,
+            'p_xz':prob_x_given_z_list,
+            'p_z': prob_z_list,
+            'contained':det_within_cell}
+        prob_x_given_z_grid.append(prob_x_given_z_list)
+        prob_z_grid.append(prob_z_list)
+        det_within_cell_grid.append(det_within_cell)
+
+    return grid_det_prob, np.array(prob_x_given_z_grid), np.array(prob_z_grid), np.array(det_within_cell_grid)
 
 # need to check if this is valid
 def get_prob_valid_measurment(dets, grid_det_prob):
@@ -499,6 +527,134 @@ def get_prob_valid_measurment(dets, grid_det_prob):
         prob = sum(temp)/len(grid_det_prob)
         result.append((dets[d_id], prob))
     return result
+
+def get_prob_valid_measurment_v2(dets, prob_x_given_z_grid, prob_z_grid, det_within_cell_grid):
+    # matrices are in the Dets x Clusters format
+    l_D, l_C = np.shape(prob_x_given_z_grid) 
+    result = [] 
+    #[(det, prob)]
+    for d_id in range(len(dets)):
+        temp = []
+
+        prob_x_given_z = prob_x_given_z_grid[d_id,:]
+        prob_z = prob_z_grid[d_id,:]
+        det_within_cell = det_within_cell_grid[d_id,:]
+
+        # print("prob_x_given_z: ", prob_x_given_z)
+        # print("prob_z: ", prob_z)
+        # print("det_within_cell: ", det_within_cell)
+
+        selected_prob_x_given_z = prob_x_given_z[det_within_cell==True]
+        selected_prob_z = prob_z[det_within_cell==True]
+
+        temp = np.multiply(selected_prob_x_given_z, selected_prob_z)
+        if len(selected_prob_z) == 0:
+            prob = 0
+        else:
+            prob = np.sum(temp)/len(selected_prob_z)
+        result.append((dets[d_id], prob))
+    return result
+
+def get_radar_cluster_centre_and_prob_v2(dets, prob_x_given_z_grid, prob_z_grid, det_within_cell_grid):
+    # matrices are in the Dets x Clusters format
+    l_D, l_C = np.shape(prob_x_given_z_grid) 
+    result = []
+
+    for c_id in range(l_C):
+        prob_x_given_z = prob_x_given_z_grid[:,c_id]
+        prob_z = prob_z_grid[:,c_id]
+        det_within_cell = det_within_cell_grid[:,c_id]
+
+        selected_prob_x_given_z = prob_x_given_z[det_within_cell==True]
+        selected_prob_z = prob_z[det_within_cell==True]
+        selected_dets = np.array(dets)[det_within_cell==True]
+
+        centre = np.dot(
+            np.multiply(selected_prob_x_given_z/np.sum(selected_prob_x_given_z), selected_prob_z),\
+            selected_dets)
+
+        temp = np.multiply(selected_prob_x_given_z, selected_prob_z)
+        if len(selected_dets) == 0:
+            prob = 0
+        else:
+            prob = np.sum(temp)/len(selected_dets)
+
+        result.append((centre, prob))
+    return result
+
+def get_radar_cluster_centre_and_prob_v3(dets, prob_x_given_z_grid, prob_z_grid, det_within_cell_grid, grid_det_prob):
+    # matrices are in the Dets x Clusters format
+    l_D, l_C = np.shape(prob_x_given_z_grid) 
+    result = []
+    for c_id in range(l_C):
+        
+        org_clstr_seed = grid_det_prob[c_id]['c']
+
+        prob_x_given_z = prob_x_given_z_grid[:,c_id]
+        prob_z = prob_z_grid[:,c_id]
+        det_within_cell = det_within_cell_grid[:,c_id]
+
+        selected_prob_x_given_z = prob_x_given_z[det_within_cell==True]
+        selected_prob_z = prob_z[det_within_cell==True]
+        selected_dets = np.array(dets)[det_within_cell==True]
+
+        centre = np.dot(
+            np.multiply(selected_prob_x_given_z/np.sum(selected_prob_x_given_z), selected_prob_z),\
+            selected_dets)
+
+        temp = np.multiply(selected_prob_x_given_z, selected_prob_z)
+        if len(selected_dets) == 0:
+            prob = 0
+        else:
+            prob = np.sum(temp)/len(selected_dets)
+
+        result.append((centre, prob, org_clstr_seed, selected_dets))
+    return result
+
+def view_clusters(data):
+    #[(centre, prob, org_clstr_seed, selected_dets)]
+    fig = plt.figure()
+    x = []
+    y = []
+    for cell_info in data:
+        prob = cell_info[1]
+        dets = cell_info[3]
+        org_c = cell_info[2]
+        # x.append(org_c[0])
+        # y.append(org_c[1])
+        # for d in dets:
+        #     x.append(d[0])
+        #     y.append(d[1])
+        if len(dets) > 0:
+            print ("org_c: ", org_c)
+            print ("prob: ", prob)
+            naive_mean=np.mean(dets, axis=0)
+            print ("naive det mean: ", naive_mean)
+            x.append(naive_mean[0])
+            y.append(naive_mean[1])
+        print ("----------------")
+    plt.scatter(x, y)
+
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.show()
+    plt.close()
+
+def view_seed_clusters(grid_det_prob):
+    fig = plt.figure()
+    x = []
+    y = []
+    for cell in grid_det_prob.items():
+        clstr = cell[1]['c']
+        x.append(clstr[0])
+        y.append(clstr[1])
+        
+    plt.scatter(x, y)
+
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.show()
+    plt.close()
 
 def get_radar_cluster_centre_and_prob(dets, grid_det_prob):
     result = []
@@ -515,7 +671,7 @@ def get_radar_cluster_centre_and_prob(dets, grid_det_prob):
 
 def visualize_data(display_data, heatmap_key="prob"):
     # recalculate detections probabilties using all the detections given untill now
-    temp = display_data["prob"].copy()
+    # temp = display_data["prob"].copy()
     dets = [x for x in zip(
         display_data['x'],
         display_data['y'],
@@ -525,24 +681,77 @@ def visualize_data(display_data, heatmap_key="prob"):
         display_data['rcs'],
         display_data['noise'],
     )]
-    grid_det_prob = get_probailty_given_all_measurements(dets)
+    grid_det_prob, prob_x_given_z_grid, prob_z_grid, det_within_cell_grid = \
+        get_probailty_given_all_measurements(dets)
+
+    # fig = plt.figure()
+
+    # plt.subplot(3, 1, 1)
+    # plt.imshow(np.transpose(prob_x_given_z_grid), cmap='hot', interpolation='nearest')
+
+    # plt.subplot(3, 1, 2)
+    # plt.imshow(np.transpose(prob_z_grid), cmap='hot', interpolation='nearest')
+
+    # plt.subplot(3, 1, 3)
+    # plt.imshow(np.transpose(det_within_cell_grid), cmap='hot', interpolation='nearest')
+
+    # plt.show()
+    
+
+    # x = np.array([[0, 10, 20], [20, 30, 40]])
+    # print("Original array: ")
+    # print(x)
+    # print("Values bigger than 10 =", x[x>10])
+    # print("Their indices are ", np.nonzero(x > 10))
+    # print (x[:,0]) # zeroth column
     # print ("grid_det_prob: ", grid_det_prob)
     # print ("\n")       
-    dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+    
+
+    # dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+
+    dets_prob = get_prob_valid_measurment_v2(dets, \
+        np.transpose(prob_x_given_z_grid), \
+        np.transpose(prob_z_grid), \
+        np.transpose(det_within_cell_grid))
+    
+    # radar_clusters_and_prob = get_radar_cluster_centre_and_prob_v2(dets, \
+    #     np.transpose(prob_x_given_z_grid), \
+    #     np.transpose(prob_z_grid), \
+    #     np.transpose(det_within_cell_grid))
+    
+    radar_cells = get_radar_cluster_centre_and_prob_v3(dets, \
+        np.transpose(prob_x_given_z_grid), \
+        np.transpose(prob_z_grid), \
+        np.transpose(det_within_cell_grid), \
+        grid_det_prob)
+
+    #visualize and print re-evaluted cluster centres x-y
+    # view_clusters(radar_cells)
+
+    #visualize original clusters
+    view_seed_clusters(grid_det_prob)
+
+    # visualization
     print ("len of dets: ", len(dets))
     print ("len of x in current frame: ", len(display_data['x']))
     print ("len of dets_prob: ", len(dets_prob))
     prob_det_frame = []
     for i in dets_prob:
         # print ("dets_prob: ", i[1])
+        #scaling for visualization
         prob_det_frame.append(int(i[1]*1000))
     print ("len of prob_det_frame: ", len(prob_det_frame))
     # print ("\n")
     display_data['prob'] = prob_det_frame
     print ("len of prob in current frame: ", len(display_data['prob']))
 
-    print ("are the instantaneous det prob == det prob when determined over the trajectory: ", temp == display_data["prob"])
-    plot_3d_smartmicro(display_data, 'x', 'y', 'z', heatmap_key)
+    # print ("are the instantaneous det prob == det prob when determined over the trajectory: ", temp == display_data["prob"])
+    # plot_3d_smartmicro(display_data, 'x', 'y', 'z', heatmap_key)
+
+    # visualize new/ re-evaluated clusters
+    # not leading to good results
+    # plot_cluster_centre_and_prob(radar_clusters_and_prob)
     return
 
 
@@ -586,30 +795,30 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
             display_data['rcs'] += dets_t['rcs']
             display_data['noise'] += dets_t['noise']
 
-            # display_data - contains all detections unitll now
-            # dets_t - instantaneous detections 
-            dets = [x for x in zip(
-                dets_t['x'],
-                dets_t['y'],
-                dets_t['z'],
-                dets_t['vr'],
-                dets_t['dBpower'],
-                dets_t['rcs'],
-                dets_t['noise'],
-            )]
-            grid_det_prob = get_probailty_given_all_measurements(dets)
-            # print ("\n")       
-            dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
-            print ("len of dets: ", len(dets))
-            prob_det_frame = []
-            for i in dets_prob:
-                # print ("dets_prob: ", i[1])
-                prob_det_frame.append(int(i[1]*1000))
-            # print ("\n")
+            # # display_data - contains all detections unitll now
+            # # dets_t - instantaneous detections 
+            # dets = [x for x in zip(
+            #     dets_t['x'],
+            #     dets_t['y'],
+            #     dets_t['z'],
+            #     dets_t['vr'],
+            #     dets_t['dBpower'],
+            #     dets_t['rcs'],
+            #     dets_t['noise'],
+            # )]
+            # grid_det_prob = get_probailty_given_all_measurements(dets)
+            # # print ("\n")       
+            # dets_prob = get_prob_valid_measurment(dets, grid_det_prob)
+            # print ("len of dets: ", len(dets))
+            # prob_det_frame = []
+            # for i in dets_prob:
+            #     # print ("dets_prob: ", i[1])
+            #     prob_det_frame.append(int(i[1]*1000))
+            # # print ("\n")
 
             #need to look into this
             # radar_clusters_and_prob = get_radar_cluster_centre_and_prob(dets, grid_det_prob)
-            display_data['prob'] += prob_det_frame
+            # display_data['prob'] += prob_det_frame
 
             if (not full_duration) and key - interval_start_time_instance > time_duration:
                 # use all detections from the entire trajectory
