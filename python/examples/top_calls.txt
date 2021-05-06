@@ -1,0 +1,102 @@
+Processes: 432 total, 2 running, 3 stuck, 427 sleeping, 3245 threads 
+2021/04/13 08:56:40
+Load Avg: 2.13, 1.96, 1.91 
+CPU usage: 4.52% user, 11.56% sys, 83.90% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9671M wired), 1188M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585305519(0) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613071/113G in, 110425930/66G out.
+Disks: 129773699/12T read, 80883725/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51+    44K+  0B   2920K+ 99983 1    sleeping *0[1+]  0.00000 0.00000    501 2470+  175+ 944+    369+    1821+  1167+   355+  71+     6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43+    48K+  0B   3360K+ 99982 1    sleeping  0[0]   0.00000 0.00000    501 7066+  368+ 265+    87+     8272+  547+    1054+ 120+    10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73+    668K+ 0B   4560K+ 99981 1    sleeping *0[9+]  0.00000 0.00000    501 6491+  263+ 533+    137+    6610+  1095+   1629+ 257+    44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59+    32K+  0B   3364K+ 99979 1    sleeping  0[0]   0.00000 0.00000    0   2958+  164+ 187+    81+     6563+  1361+   1123+ 69+     13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33+    84K+  0B   1188K+ 99893 1    sleeping *0[26+] 0.00000 0.00000    501 2075+  139+ 410+    84+     625+   600+    289+  17+     2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+Processes: 432 total, 2 running, 3 stuck, 427 sleeping, 3236 threads 
+2021/04/13 08:56:41
+Load Avg: 2.13, 1.96, 1.91 
+CPU usage: 6.10% user, 7.57% sys, 86.31% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9668M wired), 1185M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585306159(640) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613111/113G in, 110425964/66G out.
+Disks: 129773712/12T read, 80883732/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51     44K   0B   2920K  99983 1    sleeping  0[1]   0.00000 0.00000    501 2470   175  944     369     1821   1167    355   71      6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43     48K   0B   3360K  99982 1    sleeping  0[0]   0.00000 0.00000    501 7066   368  265     87      8272   547     1054  120     10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73     668K  0B   4560K  99981 1    sleeping  0[9]   0.00000 0.00000    501 6491   263  533     137     6610   1095    1629  257     44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59     32K   0B   3364K  99979 1    sleeping  0[0]   0.00000 0.00000    0   2958   164  187     81      6563   1361    1123  69      13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33     84K   0B   1188K  99893 1    sleeping  0[26]  0.00000 0.00000    501 2075   139  410     84      625    600     289   17      2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+Processes: 432 total, 4 running, 3 stuck, 425 sleeping, 3248 threads 
+2021/04/13 08:56:42
+Load Avg: 2.20, 1.98, 1.91 
+CPU usage: 5.46% user, 5.35% sys, 89.18% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9667M wired), 1140M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585316545(10386) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613176/113G in, 110426024/66G out.
+Disks: 129773904/12T read, 80883737/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51     44K   0B   2920K  99983 1    sleeping  0[1]   0.00000 0.00000    501 2470   175  944     369     1821   1167    355   71      6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43     48K   0B   3360K  99982 1    sleeping  0[0]   0.00000 0.00000    501 7066   368  265     87      8272   547     1054  120     10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73     668K  0B   4560K  99981 1    sleeping  0[9]   0.00000 0.00000    501 6491   263  533     137     6610   1095    1629  257     44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59     32K   0B   3364K  99979 1    sleeping  0[0]   0.00000 0.00000    0   2958   164  187     81      6563   1361    1123  69      13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33     84K   0B   1188K  99893 1    sleeping  0[26]  0.00000 0.00000    501 2075   139  410     84      625    600     289   17      2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+Processes: 432 total, 2 running, 3 stuck, 427 sleeping, 3245 threads 
+2021/04/13 08:56:43
+Load Avg: 2.20, 1.98, 1.91 
+CPU usage: 3.69% user, 3.47% sys, 92.83% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9667M wired), 1137M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585317183(638) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613201/113G in, 110426045/66G out.
+Disks: 129773913/12T read, 80883740/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51     44K   0B   2920K  99983 1    sleeping  0[1]   0.00000 0.00000    501 2470   175  944     369     1821   1167    355   71      6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43     48K   0B   3360K  99982 1    sleeping  0[0]   0.00000 0.00000    501 7066   368  265     87      8272   547     1054  120     10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73     668K  0B   4560K  99981 1    sleeping  0[9]   0.00000 0.00000    501 6491   263  533     137     6610   1095    1629  257     44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59     32K   0B   3364K  99979 1    sleeping  0[0]   0.00000 0.00000    0   2958   164  187     81      6563   1361    1123  69      13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33     84K   0B   1188K  99893 1    sleeping  0[26]  0.00000 0.00000    501 2075   139  410     84      625    600     289   17      2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+Processes: 432 total, 2 running, 3 stuck, 427 sleeping, 3220 threads 
+2021/04/13 08:56:44
+Load Avg: 2.20, 1.98, 1.91 
+CPU usage: 3.46% user, 5.3% sys, 91.49% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9667M wired), 1135M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585317820(637) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613213/113G in, 110426052/66G out.
+Disks: 129773925/12T read, 80883764/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51     44K   0B   2920K  99983 1    sleeping  0[1]   0.00000 0.00000    501 2470   175  944     369     1821   1167    355   71      6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43     48K   0B   3360K  99982 1    sleeping  0[0]   0.00000 0.00000    501 7066   368  265     87      8272   547     1054  120     10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73     668K  0B   4560K  99981 1    sleeping  0[9]   0.00000 0.00000    501 6491   263  533     137     6610   1095    1629  257     44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59     32K   0B   3364K  99979 1    sleeping  0[0]   0.00000 0.00000    0   2958   164  187     81      6563   1361    1123  69      13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33     84K   0B   1188K  99893 1    sleeping  0[26]  0.00000 0.00000    501 2075   139  410     84      625    600     289   17      2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+Processes: 432 total, 2 running, 3 stuck, 427 sleeping, 3217 threads 
+2021/04/13 08:56:45
+Load Avg: 2.20, 1.98, 1.91 
+CPU usage: 1.37% user, 2.64% sys, 95.98% idle 
+SharedLibs: 117M resident, 40M data, 16M linkedit.
+MemRegions: 524260 total, 9259M resident, 54M private, 1090M shared.
+PhysMem: 15G used (9667M wired), 1144M unused.
+VM: 3619G vsize, 1113M framework vsize, 2585318332(512) swapins, 2602649629(0) swapouts.
+Networks: packets: 137613236/113G in, 110426056/66G out.
+Disks: 129773938/12T read, 80883765/11T written.
+
+PID    COMMAND          %CPU TIME     #TH #WQ #PORTS MEM   PURG CMPRS  PGRP  PPID STATE    BOOSTS  %CPU_ME %CPU_OTHRS UID FAULTS COW  MSGSENT MSGRECV SYSBSD SYSMACH CSW   PAGEINS IDLEW POWER INSTRS CYCLES USER         #MREGS RPRVT VPRVT VSIZE KPRVT KSHRD
+99983  deleted          0.0  00:00.05 3   3   51     44K   0B   2920K  99983 1    sleeping  0[1]   0.00000 0.00000    501 2470   175  944     369     1821   1167    355   71      6     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99982  assistant_servic 0.0  00:00.16 2   1   43     48K   0B   3360K  99982 1    sleeping  0[0]   0.00000 0.00000    501 7066   368  265     87      8272   547     1054  120     10    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99981  parsecd          0.0  00:00.20 2   1   73     668K  0B   4560K  99981 1    sleeping  0[9]   0.00000 0.00000    501 6491   263  533     137     6610   1095    1629  257     44    0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  
+99979  dprivacyd        0.0  00:00.21 2   2   59     32K   0B   3364K  99979 1    sleeping  0[0]   0.00000 0.00000    0   2958   164  187     81      6563   1361    1123  69      13    0.0   0      0      root         N/A    N/A   N/A   N/A   N/A   N/A  
+99893  com.apple.hiserv 0.0  00:00.02 2   2   33     84K   0B   1188K  99893 1    sleeping  0[26]  0.00000 0.00000    501 2075   139  410     84      625    600     289   17      2     0.0   0      0      azizalibasic N/A    N/A   N/A   N/A   N/A   N/A  

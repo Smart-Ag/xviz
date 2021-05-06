@@ -6,6 +6,30 @@ import math
 
 K_THRESH = .1
 
+def norm(x):
+    sqnorm = x[0] * x[0] + x[1] * x[1]
+    return math.sqrt(sqnorm)
+
+
+# simple dot product
+def dot_len2(x, y):
+    return x[0] * y[0] + x[1] * y[1]
+
+
+def dot_Matrix_Vector(M2, V2):
+    return [M2[0][0] * V2[0] + M2[0][1] * V2[1], M2[1][0] * V2[0] + M2[1][1] * V2[1]]
+
+
+# Stackoverflow: dot product of two vectors in python 3 with out using the sum or zip function
+def dot_any_len(vector01, vector02):
+    if len(vector01) != len(vector02):
+        raise ValueError
+    total = 0
+    for i in range(len(vector01)):
+        total += vector01[i] * vector02[i]
+    return total
+
+
 def get_heading(a, b):
     y_diff = b[1] - a[1]
     x_diff = b[0] - a[0]
@@ -24,12 +48,41 @@ def euc(x,y):
     distance = math.sqrt(sum([(a - b) ** 2 for a, b in zip(x, y)]))
     return distance
 
+
+def compute_cte(current_pos, waypoints, current_heading):
+
+    prev_pos_ind = closest_node_behind(current_pos, waypoints, current_heading)
+    prev_pos = waypoints[max(0, prev_pos_ind)]
+
+    next_pos_ind = prev_pos_ind + 1
+    next_pos = waypoints[min(len(waypoints)-1, next_pos_ind)]
+
+    a_vec = next_pos - prev_pos  # vector from last wp to next wp
+    # Angle at which route is tilted from y
+    omega = atan2(a_vec[0], a_vec[1])
+    rot = [[cos(-omega), sin(-omega)],
+           [-sin(-omega), cos(-omega)]]
+
+    # Relative positon w.r.t last waypoint
+    rel_pos = (current_pos[0] - prev_pos[0], current_pos[1] - prev_pos[1])
+
+    # Rotate position vector by the same angle
+    pos_rot = dot_Matrix_Vector(rot, rel_pos)
+
+    # After rotation, "x" component is the CTE
+    # Offset = +ve for left of route
+    cte = -pos_rot[0]
+
+    return cte
+
+
 def compute_curvature(a, b, c):
     CA = sqrt((c[1] - a[1])**2 + (c[0] - a[0])**2)
     ang_abc = get_angle(a, b, c)
     CA = max(CA, 0.01)  # Avoid division by zero
     curvature = (2 * sin(ang_abc)) / CA
     return curvature
+
 
 def has_high_curvature(points, K_THRESH):
 
@@ -78,9 +131,28 @@ def get_point_until_d(points_x, points_y, i, inc, max_dist):
     return points_ahead
 
 def closest_node(node, nodes):
-    nodes = np.asarray(nodes)
+    #nodes = np.asarray(nodes)
     dist_2 = np.sum((nodes - node)**2, axis=1)
     return np.argmin(dist_2)
+
+
+def closest_node_behind(node, nodes, current_heading):
+    dist_2 = np.sum((nodes - node) ** 2, axis=1)
+    min_ind = np.argmin(dist_2)
+    inds = [min_ind, min(min_ind + 1, len(nodes)-1), max(0, min_ind - 1)]
+
+    min_angle = 0.
+    for (ind) in inds:
+        diff = abs(angle_diff(current_heading, get_heading(node, nodes[min_ind])))
+        if diff <= min_angle:
+            min_ind = ind
+            min_angle = diff
+
+    return min_ind
+
+
+def angle_diff(h1, h2):
+    return math.atan2(math.sin(h1-h2), math.cos(h1-h2))
 
 def get_rows(file_name):
     try:
@@ -98,7 +170,7 @@ def get_rows(file_name):
 
 def is_close_to_curve(builder, data, i, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
 
-    np_data = np.array(data)
+    np_data = np.array(np.copy(data))
 
     #print("np_data:", np_data)
     points_x = list(np_data[:, 0])
@@ -126,8 +198,9 @@ def is_close_to_curve(builder, data, i, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METER
 
     return curve_behind
 
-def get_actual_path(data, i, machine_width, LOOK_AHEAD_METERS=10.):
+def get_actual_path(data, i, machine_width, cte, LOOK_AHEAD_METERS=10.):
     W_half = machine_width / 2.0
+    cte_half = (cte / 2.0)
 
     for j in range(len(data)-1):
         row0 = data[i]
@@ -146,20 +219,30 @@ def get_actual_path(data, i, machine_width, LOOK_AHEAD_METERS=10.):
 
     #print("self.path:", path)
 
-    left = np.column_stack([path[:, 0] + W_half * np.cos(path[:, 2] + pi / 2),
-                            path[:, 1] + W_half * np.sin(path[:, 2] + pi / 2)])
-    right = np.column_stack([path[:, 0] + W_half * np.cos(path[:, 2] - pi / 2),
-                            path[:, 1] + W_half * np.sin(path[:, 2] - pi / 2)])
+    cte_offset_x = (cte_half * np.cos(path[:, 2] + pi / 2))
+    cte_offset_y = (cte_half * np.sin(path[:, 2] + pi / 2))
+
+    left_offset_x = (W_half * np.cos(path[:, 2] + pi / 2)) + cte_offset_x
+    left_offset_y = (W_half * np.sin(path[:, 2] + pi / 2)) + cte_offset_y
+
+    right_offset_x = (W_half * np.cos(path[:, 2] - pi / 2)) + cte_offset_x
+    right_offset_y = (W_half * np.sin(path[:, 2] - pi / 2)) + cte_offset_y
+
+    left = np.column_stack([path[:, 0] + left_offset_x,
+                            path[:, 1] + left_offset_y])
+    right = np.column_stack([path[:, 0] + right_offset_x,
+                            path[:, 1] + right_offset_y])
 
     return path, left, right
 
 
-def get_actual_path_poly(data, i, machine_width, LOOK_AHEAD_METERS=10.):
+def get_actual_path_poly(data, i, machine_width, cte, LOOK_AHEAD_METERS=10.):
 
     #print("Using actual path poly")
     _path, left, right = get_actual_path(
         data=data,
         i=i,
+        cte=cte,
         machine_width=machine_width,
         LOOK_AHEAD_METERS=LOOK_AHEAD_METERS)
 

@@ -23,7 +23,7 @@ from scenarios.utils.read_protobufs import deserialize_collector_output, \
 from scenarios.safety_subsystems.radar_filter import RadarFilter
 from scenarios.safety_subsystems.path_prediction import get_path_distances, get_path_poly, predict_path
 
-from scenarios.safety_subsystems.real_path_prediction import get_rows, is_close_to_curve, get_actual_path_poly, closest_node
+from scenarios.safety_subsystems.real_path_prediction import get_rows, is_close_to_curve, get_actual_path_poly, closest_node, closest_node_behind, compute_cte
 
 import xviz_avs as xviz
 
@@ -695,13 +695,24 @@ class CollectorScenario:
         if ready_to_draw:
             _, tractor_state = self.tractor_state[-1]
             xy_array = utm_array_to_local(tractor_state, self.utm_zone, self.planned_path)
-            clostest_point_ind = closest_node([0, 0], xy_array)
-
             xy_array = np.append(xy_array, np.ones((xy_array.shape[0],1)), axis=1)
+
+            current_post = np.asarray([0, 0, 0])
+            #print("xy_array.shape:", xy_array.shape)
+            #if (xy_array.shape[1] == 2):
+            #    xy_array = np.hstack((xy_array, np.zeros((len(xy_array),1))))
+            #clostest_point_ind = closest_node([0, 0], xy_array)
+            clostest_point_ind = closest_node_behind(current_post, xy_array, self.tractor_theta)
+            #print("xy_array.shape2:", xy_array.shape)
+
             z = 1.0
-            if is_close_to_curve(builder, xy_array, i=clostest_point_ind, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
-                machine_width = self.global_config['safety']['path_widths']['default']
-                stop_poly = get_actual_path_poly(data=xy_array, i=clostest_point_ind, machine_width=machine_width, LOOK_AHEAD_METERS=10.)
+            #if is_close_to_curve(builder, xy_array, i=clostest_point_ind, LOOK_AHEAD_METERS=10., LOOK_BEHIND_METERS=5.):
+            cte = compute_cte(current_post, xy_array, self.tractor_theta) * 10
+            #cte = 0
+            #print("cte:", cte)
+            #self.tractor_theta = (90 - tractor_state['heading']) * math.pi / 180
+            machine_width = self.global_config['safety']['path_widths']['default']
+            stop_poly = get_actual_path_poly(data=xy_array, i=clostest_point_ind, cte=cte, machine_width=machine_width, LOOK_AHEAD_METERS=10.)
 
 
         return clostest_point_ind, stop_poly
