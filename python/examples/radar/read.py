@@ -67,7 +67,30 @@ def establish_target_key(tgt_id, targets):
         make_keys(targets[tgt_id], signal_type='filtered')
 
 
-def get_targets_smartmicro(collector_instances, radar_filter):
+def get_target_sets(collector_instances, radar_filter=None):
+    filtered_target_sets = []
+    raw_target_sets = []
+
+    for collector_output in collector_instances:
+
+        collector_output, _ = deserialize_collector_output(collector_output)
+        _, radar_output, _, _, _, _, _, _, _ = extract_collector_output_slim(
+            collector_output, get_camera_data=False)
+
+        if radar_output is None:
+            continue
+
+        raw_target_sets.append(radar_output['targets'].values())
+
+        if radar_filter is not None:
+            filtered_target_sets.append(
+                list(filter(radar_filter.is_valid_target,
+                            radar_output['targets'].values())))
+
+    return raw_target_sets, filtered_target_sets
+
+
+def get_targets_smartmicro(collector_instances, radar_filter=None):
     filtered_targets = defaultdict(list)
     raw_targets = defaultdict(list)
 
@@ -82,7 +105,9 @@ def get_targets_smartmicro(collector_instances, radar_filter):
 
         for target in radar_output['targets'].values():
             append_values_smartmicro(raw_targets, target)
-            if radar_filter.is_valid_target(target):
+
+            if radar_filter is not None \
+                    and radar_filter.is_valid_target(target):
                 append_values_smartmicro(filtered_targets, target)
 
     return raw_targets, filtered_targets

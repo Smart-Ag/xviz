@@ -18,7 +18,8 @@ def main(selected_tgt_ids, selected_timespan, tgt_id_tspans):
 
     collector_output_file = collector_config['collector_output_file']
     extract_directory = collector_config['extract_directory']
-    collector_instances = get_collector_instances(collector_output_file, extract_directory)
+    collector_instances = get_collector_instances(collector_output_file,
+                                                  extract_directory)
 
     global_config = load_global_config(collector_config['MACHINE_TYPE'])
     radar_safety_config = global_config['safety']['radar']
