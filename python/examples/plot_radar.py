@@ -7,8 +7,8 @@ from scenarios.safety_subsystems.radar_filter import RadarFilter, \
     SmartMicroRadarFilter
 from scenarios.utils.filesystem import get_collector_instances, load_config, \
     load_global_config
-from radar_viz.read import get_targets, get_detected_target_ids, get_targets_smartmicro
-from radar_viz.plotting import plot_metadata, plot_tracking, plot_3d, \
+from radar.read import get_targets, get_detected_target_ids, get_targets_smartmicro
+from radar.plotting import plot_metadata, plot_tracking, plot_3d, \
     plot_3d_smartmicro, polar_plot
 
 
