@@ -14,6 +14,11 @@ def main():
 
     targets, _ = get_target_sets(collector_instances)
 
+    for target in targets:
+        for t in target:
+            print(t)
+        break
+
 
 if __name__ == '__main__':
     main()

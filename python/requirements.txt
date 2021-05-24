@@ -12,3 +12,4 @@ Cython==0.29.22
 wheel==0.34.2
 matplotlib==3.3.2
 utm==0.5.0
+scipy==1.6.3
