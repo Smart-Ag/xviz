@@ -80,7 +80,7 @@ def get_target_sets(collector_instances, radar_filter=None):
         if radar_output is None:
             continue
 
-        raw_target_sets.append(radar_output['targets'].values())
+        raw_target_sets.append(list(radar_output['targets'].values()))
 
         if radar_filter is not None:
             filtered_target_sets.append(

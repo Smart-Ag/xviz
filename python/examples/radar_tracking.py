@@ -15,10 +15,13 @@ def main():
 
     target_sets, _ = get_target_sets(collector_instances)
 
-    tracker = Tracker()
+    dt = 0.1
+    cost_threshold = 16
+    kill_threshold = 5
+    tracker = Tracker(dt, cost_threshold, kill_threshold)
 
     for target_set in target_sets:
-        tracker.assign_and_spawn(target_set)
+        tracker.update(target_set)
 
 
 if __name__ == '__main__':

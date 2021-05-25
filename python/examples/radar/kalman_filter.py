@@ -3,57 +3,16 @@ from scipy.linalg import inv
 
 
 class KalmanFilter:
-    """
-    States are spherical coordinates and the first time derivatives
-    X = [r, rdot, phi, phidot, theta, thetadot]
 
-    Measured values are a subset of the state vector
-    z = [r, rdot, phi, theta]
-
-    Assumptions:
-    - zero acceleration throughout timestep
-    - estimation errors for each axis are independent
-    """
-
-    def __init__(self, dt):
-        F_tile = [
-            [1, dt],
-            [0, 1],
-        ]
-        # state transition matrix
-        self.F = np.kron(np.eye(3), F_tile)
-
-        # For now, disregard control input
-        # Control input could be speed and yawrate of vehicle
-        self.G = np.zeros((6, 2))
-
-        # radar measures r, rdot, phi, and theta
-        self.H = np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0],
-        ])
-
-        D = np.zeros((4, 2))  # no feedthrough
-
-        self.X = np.zeros(6)  # state vector
-
-        state_estimation_variance = 1.
-        # estimate uncertainty covariance
-        self.P = np.diag(np.ones(6)) * state_estimation_variance
-
-        acceleration_variance = 1.
-        # self.Q = np.diag(np.ones(6)) * acceleration_variance  # process noise covariance
-        Q_tile = [
-            [dt**4/4, dt**3/2],
-            [dt**3/2, dt**2],
-        ]
-        self.Q = np.kron(np.eye(3), Q_tile) * acceleration_variance
-
-        measurement_variance = .1
-        # measurement noise covariance
-        self.R = np.diag(np.ones(4)) * measurement_variance
+    def __init__(self, dt, X, F, G, H, D, P, Q, R):
+        self.X = X  # state vector
+        self.F = F  # state transition matrix
+        self.G = G  # control matrix
+        self.H = H  # observation matrix
+        self.D = D  # feedthrough matrix
+        self.P = P  # state covariance
+        self.Q = Q  # process covariance
+        self.R = R  # measurement covariance
 
     def update_state(self, K, z):
         """
@@ -93,7 +52,7 @@ class KalmanFilter:
         """
         return self.P @ self.H.T @ inv(self.H @ self.P @ self.H.T + self.R)
 
-    def filter_measurement(self, z, u):
+    def update_with_measurement(self, z, u):
         """
         Update X(t) and P(t)
         Predict X(t+1) and P(t+1)
@@ -111,8 +70,49 @@ class KalmanFilter:
         return X
 
 
+# testing
 def main():
-    kf = KalmanFilter(.1)
+    dt = 0.1
+    X = np.zeros(6)  # state vector
+
+    F_tile = [
+        [1, dt],
+        [0, 1],
+    ]
+    # state transition matrix
+    F = np.kron(np.eye(3), F_tile)
+
+    # For now, disregard control input
+    # Control input could be speed and yawrate of vehicle
+    G = np.zeros((6, 2))
+
+    # radar measures r, rdot, phi, and theta
+    H = np.array([
+        [1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0],
+    ])
+
+    D = np.zeros((4, 2))  # no feedthrough
+
+    state_estimation_variance = 1.
+    # estimate uncertainty covariance
+    P = np.diag(np.ones(6)) * state_estimation_variance
+
+    acceleration_variance = 1.
+    # Q = np.diag(np.ones(6)) * acceleration_variance  # process noise covariance
+    Q_tile = [
+        [dt**4/4, dt**3/2],
+        [dt**3/2, dt**2],
+    ]
+    Q = np.kron(np.eye(3), Q_tile) * acceleration_variance
+
+    measurement_variance = .1
+    # measurement noise covariance
+    R = np.diag(np.ones(4)) * measurement_variance
+
+    kf = KalmanFilter(dt, X, F, G, H, D, P, Q, R)
 
     u = np.zeros(2)
 
@@ -126,7 +126,7 @@ def main():
     filtered_measurements = []
 
     for z in measurements:
-        z_filtered = kf.filter_measurement(z, u)
+        z_filtered = kf.update_with_measurement(z, u)
         filtered_measurements.append(z_filtered)
 
     fig, ax = plt.subplots(nrows=2, ncols=3)
