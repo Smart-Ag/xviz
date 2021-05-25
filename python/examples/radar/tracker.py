@@ -13,17 +13,40 @@ class Tracker:
         self.tracks = []
 
     def assign_and_spawn(self, targets):
+        """
+        Cost matrix:
+                 track1  track2 ..
+                 -----------------
+        target1 |      |       |
+                 -----------------
+        target2 |      |       |
+                 -----------------
+           :    |      |       |
+        """
         cost_matrix = []
-        for track in self.tracks:
+        for target in targets:
             row_cost = []
-            for target in targets:
-                row_cost.append(self.match_cost(track, target))
+            for track in self.tracks:
+                row_cost.append(self.match_cost(target, track))
+            cost_matrix.append(row_cost)
 
-    def match_cost(track, target):
+        row_idx, col_idx = linear_sum_assignment(cost_matrix)
+        target_idx_set = set(len(targets))
+        track_idx_set = set(len(self.tracks))
+
+    def match_cost(target, track):
         """
         Cost is the sum of squares of position deltas:
             C = (x1-x0)**2 + (y1-y0)**2 + (z1-z0)**2
 
         We might consider adding metadata differences to the cost
         """
-        pass
+        track_r = track.X[0]
+        target_r = target['dr']
+        track_phi = track.X[2]
+        target_phi = target['phi']
+        track_theta = track.X[4]
+        target_theta = target['elevation']
+        return (track_r - target_r)**2 \
+               + (track_phi - target_phi)**2 \
+               + (track_theta - target_theta)**2
