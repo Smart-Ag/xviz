@@ -103,7 +103,7 @@ class QState:
 
 class SmartMicroRadarFilter:
 
-    def __init__(self, dBpower_threshold=0.):
+    def __init__(self, dBpower_threshold=80.):
         self.dBpower_threshold = dBpower_threshold
 
     def is_valid_target(self, target):
