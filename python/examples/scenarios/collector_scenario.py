@@ -1,6 +1,7 @@
 import math
 import time
 from pathlib import Path
+import json
 import numpy as np
 import cv2
 
@@ -99,11 +100,19 @@ class CollectorScenario:
 
 
     def store_tracking_output(self, msg):
-        tracking_output = falconeye_pb2.TrackingOutput()
-        tracking_output.ParseFromString(msg.payload)
-        tracking_output = MessageToDict(tracking_output, including_default_value_fields=True)
+        try:
+            if not msg.payload:
+                raise ValueError('payload is empty')
+            tracking_output = falconeye_pb2.TrackingOutput()
+            tracking_output.ParseFromString(msg.payload)
+            tracking_output = MessageToDict(tracking_output, including_default_value_fields=True)
+        except Exception as e:
+            if isinstance(e, ValueError):
+                tracking_output = None
+            else:
+                tracking_output = json.loads(msg.payload.decode('ascii'))
         self.mqtt_tracking_outputs.append(tracking_output)
-        print('tracking outputs received:', len(self.mqtt_tracking_outputs))
+        # print('tracking outputs received:', len(self.mqtt_tracking_outputs))
 
 
     def get_metadata(self):
@@ -374,8 +383,8 @@ class CollectorScenario:
                     theta=target.get('elevation', 0.), radar_ob=True)
 
                 if self.smartmicro_radar:
-                    sm = SmartMicroRadarFilter(dBpower_threshold=80.)
-                    if sm.is_valid_target(target):
+                    sm_filter = SmartMicroRadarFilter(dBpower_threshold=80.)
+                    if sm_filter.is_valid_target(target):
                         # d = <cube dimension> / 2, height is determined in collector_meta.py
                         # select d such that it is == <height in collector_meta.py> / 2
                         d = .3
@@ -427,7 +436,7 @@ class CollectorScenario:
             return
 
         try:
-            if 'tracks' in tracking_output:
+            if isinstance(tracking_output, dict) and 'tracks' in tracking_output:
                 min_confidence = 0.1
                 min_hits = 2
                 for track in tracking_output['tracks']:
@@ -435,7 +444,8 @@ class CollectorScenario:
                             or not track['hitStreak'] > min_hits:
                         continue
 
-                    (x, y, z) = self.get_object_xyz(track['distance'], track['angle'])
+                    (x, y, z) = self.get_object_xyz(track['distance'],
+                                                    track['angle'])
                     z = 1.
 
                     if track['radarDistCamFrame'] != self.track_history.get(
@@ -457,6 +467,31 @@ class CollectorScenario:
                             .id(track['trackId'])
 
                     self.track_history[track['trackId']] = track['radarDistCamFrame']
+
+            # check if tracking output is from prototype tracking program (radar_tracking.py)
+            elif isinstance(tracking_output, list):
+                for track in tracking_output:
+                    track_r = track['state'][0]
+                    track_phi = track['state'][2]
+                    track_theta = track['state'][4]
+                    (x, y, z) = self.get_object_xyz(track_r, track_phi,
+                                                    track_theta, radar_ob=True)
+                    if track['is_alive']:
+                        fill_color = [0, 255, 0]  # Green
+                    else:
+                        fill_color = [0, 0, 255]  # Blue
+
+                    # d = <cube dimension> / 2, height is determined in collector_meta.py
+                    # select d such that it is == <height in collector_meta.py> / 2
+                    d = .3
+                    builder.primitive("/smartmicro_radar_targets") \
+                        .polygon([
+                            x-d, y-d, z,
+                            x+d, y-d, z,
+                            x+d, y+d, z,
+                            x-d, y+d, z,
+                        ]) \
+                        .style({'fill_color': fill_color}) \
 
         except Exception as e:
             print('Crashed in draw tracking targets:', e)
