@@ -1,7 +1,8 @@
+import json
 import paho.mqtt.client as mqtt
 
 
-class MqttConst(object):
+class MqttConst:
     TRACKS_TOPIC = 'vision/tracking/targets'
     RADAR_TOPIC = 'vision/radar/targets'
     CAMERA_TOPIC = 'vision/camera/targets'
@@ -9,7 +10,7 @@ class MqttConst(object):
     HAZARD_CAMERA_TOPIC = 'vision/hazard-camera/targets'
 
 
-class ComManager(object):
+class ComManager:
 
     def __init__(self, host='localhost', port=1883):
         self.client = mqtt.Client()
@@ -39,6 +40,12 @@ class ComManager(object):
                 self.subscriptions[topic].append(callbackFn)
         
         return lambda: self.unsubscribe(topic, callbackFn)
+
+    def publish(self, topic, data):
+        self.client.publish(topic, data)
+
+    def publish_json(self, topic, data):
+        self.client.publish(topic, json.dumps(data))
 
     def remove_topic_if_subs_empty(self, topic):
         subs = self.subscriptions.get(topic)  
