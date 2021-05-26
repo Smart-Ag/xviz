@@ -16,7 +16,7 @@ class Track:
     - estimation errors for each axis are independent
     """
 
-    def __init__(self, dt, updates_until_alive=5):
+    def __init__(self, dt, updates_until_alive):
         self.X, self.kf = self.initialize_kalman_filter(dt)
         self.is_alive = False
         self.updates_until_alive = updates_until_alive
@@ -51,13 +51,13 @@ class Track:
         # estimate uncertainty covariance
         P = np.diag(np.ones(6)) * state_estimation_variance
 
-        acceleration_variance = 1.
-        # Q = np.diag(np.ones(6)) * acceleration_variance  # process noise covariance
-        Q_tile = [
-            [dt**4/4, dt**3/2],
-            [dt**3/2, dt**2],
-        ]
-        Q = np.kron(np.eye(3), Q_tile) * acceleration_variance
+        acceleration_variance = .1
+        Q = np.diag(np.ones(6)) * acceleration_variance  # process noise covariance
+        # Q_tile = [
+        #     [dt**4/4, dt**3/2],
+        #     [dt**3/2, dt**2],
+        # ]
+        # Q = np.kron(np.eye(3), Q_tile) * acceleration_variance
 
         measurement_variance = .1
         # measurement noise covariance
@@ -92,12 +92,20 @@ class Track:
         if self.num_updates > self.updates_until_alive:
             self.is_alive = True
 
+    def make_publishable(self):
+        return {
+            'state': self.get_state().tolist(),
+            'is_alive': self.is_alive,
+        }
+
 
 class Tracker:
 
-    def __init__(self, dt, cost_threshold, kill_threshold):
+    def __init__(self, dt, updates_until_alive, cost_threshold, kill_threshold):
         self.tracks = []  # list of Track objects
         self.dt = dt  # timestep length
+
+        self.updates_until_alive = updates_until_alive
 
         # if cost of a match is above this threshold, the target does not update
         # the track. Instead, a new track is spawned.
@@ -108,6 +116,8 @@ class Tracker:
         self.kill_threshold = kill_threshold
 
     def update(self, targets, u=None):
+        if not targets:
+            return
         row_idx, col_idx, cost_matrix = self.assign(targets)
         target_idx_set = set(range(len(targets)))
         track_idx_set = set(range(len(self.tracks)))
@@ -115,7 +125,7 @@ class Tracker:
         spawned_tracks = []
         for i in range(len(row_idx)):
             r, c = row_idx[i], col_idx[i]
-            if cost_matrix[r, c] < self.cost_threshold:
+            if cost_matrix[r][c] < self.cost_threshold:
                 self.tracks[c].update(targets[r], u)
             else:  # bad match
                 new_track = self.spawn_track(targets[r])
@@ -140,14 +150,14 @@ class Tracker:
 
     def kill_old_tracks(self):
         self.tracks = list(filter(
-            lambda track: track.last_updated > self.kill_threshold,
+            lambda track: track.last_updated < self.kill_threshold,
             self.tracks))
 
     def spawn_track(self, target):
         """
         Inititialze the track with the target measurements
         """
-        track = Track(self.dt)
+        track = Track(self.dt, self.updates_until_alive)
         track.set_state(target)
         return track
 
@@ -171,7 +181,7 @@ class Tracker:
                 row_cost.append(match_cost)
             cost_matrix.append(row_cost)
         row_idx, col_idx = linear_sum_assignment(cost_matrix)
-        return row_idx, col_idx, np.array(cost_matrix)
+        return row_idx, col_idx, cost_matrix
 
     def compute_cost(self, target, track_state):
         """
@@ -193,26 +203,5 @@ class Tracker:
                + (track_phi - target_phi)**2 \
                + (track_theta - target_theta)**2
 
-
-# testing
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    plt.rcParams['figure.figsize'] = [16, 10]
-    plt.rcParams['savefig.facecolor'] = 'black'
-    plt.rcParams['figure.facecolor'] = 'black'
-    plt.rcParams['figure.edgecolor'] = 'white'
-    plt.rcParams['axes.facecolor'] = 'black'
-    plt.rcParams['axes.edgecolor'] = 'white'
-    plt.rcParams['axes.labelcolor'] = 'white'
-    plt.rcParams['axes.titlecolor'] = 'white'
-    plt.rcParams['xtick.color'] = 'white'
-    plt.rcParams['ytick.color'] = 'white'
-    plt.rcParams['text.color'] = 'white'
-    plt.rcParams["figure.autolayout"] = True
-    # plt.rcParams['legend.facecolor'] = 'white'
-
-    main()
+    def make_tracks_publishable(self):
+        return list(map(lambda track: track.make_publishable(), self.tracks))
