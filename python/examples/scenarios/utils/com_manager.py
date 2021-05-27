@@ -8,6 +8,7 @@ class MqttConst:
     CAMERA_TOPIC = 'vision/camera/targets'
     DATA_TOPIC = 'collector/data/#'
     HAZARD_CAMERA_TOPIC = 'vision/hazard-camera/targets'
+    RADAR_TRACKS_TOPIC = 'vision/radar/tracks'
 
 
 class ComManager:
