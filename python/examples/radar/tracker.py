@@ -1,110 +1,12 @@
-import numpy as np
 from scipy.optimize import linear_sum_assignment
-from .kalman_filter import KalmanFilter
-
-
-class Track:
-    """
-    States are spherical coordinates and the first time derivatives
-    X = [r, rdot, phi, phidot, theta, thetadot]
-
-    Measured values are a subset of the state vector
-    z = [r, rdot, phi, theta]
-
-    Assumptions:
-    - zero acceleration throughout timestep
-    - estimation errors for each axis are independent
-    """
-
-    def __init__(self, dt, updates_until_alive):
-        self.X, self.kf = self.initialize_kalman_filter(dt)
-        self.is_alive = False
-        self.updates_until_alive = updates_until_alive
-        self.num_updates = 0
-        self.last_updated = 0  # iterations since last updated by a target
-
-    def initialize_kalman_filter(self, dt):
-        X = np.zeros(6)  # state vector
-
-        F_tile = [
-            [1, dt],
-            [0, 1],
-        ]
-        # state transition matrix
-        F = np.kron(np.eye(3), F_tile)
-
-        # For now, disregard control input
-        # Control input could be speed and yawrate of vehicle
-        G = np.zeros((6, 2))
-
-        # radar measures r, rdot, phi, and theta
-        H = np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0],
-        ])
-
-        D = np.zeros((4, 2))  # no feedthrough
-
-        state_estimation_variance = 1.
-        # estimate uncertainty covariance
-        P = np.diag(np.ones(6)) * state_estimation_variance
-
-        acceleration_variance = .1
-        Q = np.diag(np.ones(6)) * acceleration_variance  # process noise covariance
-        # Q_tile = [
-        #     [dt**4/4, dt**3/2],
-        #     [dt**3/2, dt**2],
-        # ]
-        # Q = np.kron(np.eye(3), Q_tile) * acceleration_variance
-
-        measurement_variance = .1
-        # measurement noise covariance
-        R = np.diag(np.ones(4)) * measurement_variance
-
-        return X, KalmanFilter(dt, X, F, G, H, D, P, Q, R)
-
-    def get_state(self):
-        return self.X
-
-    def set_state(self, target):
-        self.X[0] = target['dr']
-        self.X[1] = target['vr']
-        self.X[2] = target['phi']
-        self.X[4] = target['elevation']
-
-    def update(self, target, u):
-        if u is None:
-            u = np.zeros(self.kf.G.shape[1])
-        z = np.array([
-            target['dr'],
-            target['vr'],
-            target['phi'],
-            target['elevation'],
-        ])
-
-        self.X = self.kf.update_with_measurement(z, u)
-
-        self.num_updates += 1
-        self.last_updated = 0
-
-        if self.num_updates > self.updates_until_alive:
-            self.is_alive = True
-
-    def make_publishable(self):
-        return {
-            'state': self.get_state().tolist(),
-            'is_alive': self.is_alive,
-        }
+from .tracks import SMTrack, BoschTrack, TrackType
 
 
 class Tracker:
 
-    def __init__(self, dt, updates_until_alive, cost_threshold, kill_threshold):
-        self.tracks = []  # list of Track objects
+    def __init__(self, dt, updates_until_alive,
+                 cost_threshold, kill_threshold, track_type):
         self.dt = dt  # timestep length
-
         self.updates_until_alive = updates_until_alive
 
         # if cost of a match is above this threshold, the target does not update
@@ -115,9 +17,19 @@ class Tracker:
         # iterations
         self.kill_threshold = kill_threshold
 
+        self.tracks = []
+        self.track_type = track_type
+
     def update(self, targets, u=None):
-        if not targets:
-            return
+        """
+        1) Assign targets to tracks
+        2) Update track from assigned target if assignment cost is below
+        threshold. Otherwise, spawn new track for target and update track
+        without measurement.
+        3) Spawn new tracks for all unassigned targets
+        4) Update unassigned tracks without using a measurement
+        5) Kill old tracks
+        """
         row_idx, col_idx, cost_matrix = self.assign(targets)
         target_idx_set = set(range(len(targets)))
         track_idx_set = set(range(len(self.tracks)))
@@ -130,7 +42,7 @@ class Tracker:
             else:  # bad match
                 new_track = self.spawn_track(targets[r])
                 spawned_tracks.append(new_track)
-                self.tracks[c].last_updated += 1
+                self.tracks[c].blind_update(u)
 
             target_idx_set.remove(r)
             track_idx_set.remove(c)
@@ -142,7 +54,7 @@ class Tracker:
 
         for track_idx in track_idx_set:
             unmatched_track = self.tracks[track_idx]
-            unmatched_track.last_updated += 1
+            unmatched_track.blind_update(u)
 
         self.kill_old_tracks()
 
@@ -157,7 +69,12 @@ class Tracker:
         """
         Inititialze the track with the target measurements
         """
-        track = Track(self.dt, self.updates_until_alive)
+        if self.track_type is TrackType.smart_micro:
+            track = SMTrack(self.dt, self.updates_until_alive)
+        elif self.track_type is TrackType.bosch:
+            track = BoschTrack(self.dt, self.updates_until_alive)
+        else:
+            raise ValueError('track type is unrecognized')
         track.set_state(target)
         return track
 
@@ -176,32 +93,11 @@ class Tracker:
         for target in targets:
             row_cost = []
             for track in self.tracks:
-                track_state = track.get_state()
-                match_cost = self.compute_cost(target, track_state)
+                match_cost = track.compute_cost(target)
                 row_cost.append(match_cost)
             cost_matrix.append(row_cost)
         row_idx, col_idx = linear_sum_assignment(cost_matrix)
         return row_idx, col_idx, cost_matrix
-
-    def compute_cost(self, target, track_state):
-        """
-        Cost is the sum of squares of position deltas:
-            C = (x1-x0)**2 + (y1-y0)**2 + (z1-z0)**2
-
-        We might consider adding metadata differences to the cost
-        """
-        track_r = track_state[0]
-        target_r = target['dr']
-        track_rdot = track_state[1]
-        target_rdot = target['vr']
-        track_phi = track_state[2]
-        target_phi = target['phi']
-        track_theta = track_state[4]
-        target_theta = target['elevation']
-        return (track_r - target_r)**2 \
-               + (track_rdot - target_rdot)**2 \
-               + (track_phi - target_phi)**2 \
-               + (track_theta - target_theta)**2
 
     def make_tracks_publishable(self):
         return list(map(lambda track: track.make_publishable(), self.tracks))
