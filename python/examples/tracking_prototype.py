@@ -9,11 +9,11 @@ from radar.tracks import TrackType
 
 
 def publish_tracks(comm, tracks):
-    comm.publish_json(MqttConst.TRACKS_TOPIC, tracks)
+    comm.publish_json(MqttConst.RADAR_TRACKS_TOPIC, tracks)
 
 
 def publish_none(comm):
-    comm.publish(MqttConst.TRACKS_TOPIC, None)
+    comm.publish(MqttConst.RADAR_TRACKS_TOPIC, None)
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
     tracker = Tracker(dt, updates_until_alive,
                       cost_threshold, kill_threshold, track_type)
 
-    for target_set in filtered_target_sets:
+    for target_set in raw_target_sets:
         if not target_set or target_set is None:
             publish_none(comm)
         else:
