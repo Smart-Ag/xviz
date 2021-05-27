@@ -50,8 +50,10 @@ class CollectorScenario:
         self.mqtt_enabled = collector_config['mqtt_enabled']
         if self.mqtt_enabled:
             self.mqtt_tracking_outputs = []
+            self.radar_tracks = []
             comm = ComManager()
             comm.subscribe(MqttConst.TRACKS_TOPIC, self.store_tracking_output)
+            comm.subscribe(MqttConst.RADAR_TRACKS_TOPIC, self.store_radar_tracks)
 
         self.global_config = load_global_config(collector_config['MACHINE_TYPE'])
         self.radar_filter = RadarFilter(self.global_config['safety']['radar'])
@@ -102,20 +104,19 @@ class CollectorScenario:
 
 
     def store_tracking_output(self, msg):
-        try:
-            if not msg.payload:
-                raise ValueError('payload is empty')
-            tracking_output = falconeye_pb2.TrackingOutput()
-            tracking_output.ParseFromString(msg.payload)
-            tracking_output = MessageToDict(tracking_output,
-                                            including_default_value_fields=True)
-        except Exception as e:
-            if isinstance(e, ValueError):
-                tracking_output = None
-            else:
-                tracking_output = json.loads(msg.payload.decode('ascii'))
+        tracking_output = falconeye_pb2.TrackingOutput()
+        tracking_output.ParseFromString(msg.payload)
+        tracking_output = MessageToDict(tracking_output,
+                                        including_default_value_fields=True)
         self.mqtt_tracking_outputs.append(tracking_output)
         # print('tracking outputs received:', len(self.mqtt_tracking_outputs))
+
+
+    def store_radar_tracks(self, msg):
+        radar_tracks = json.loads(msg.payload.decode('ascii')) \
+            if msg.payload else None
+        self.radar_tracks.append(radar_tracks)
+        # print('tracking outputs received:', len(self.radar_tracks))
 
 
     def get_metadata(self):
@@ -267,8 +268,12 @@ class CollectorScenario:
                 if self.mqtt_tracking_outputs:
                     tracking_output = self.mqtt_tracking_outputs[self.index]
                 else:
-                    print("mqtt enabled but no mqtt tracking outputs are stored")
                     tracking_output = None
+
+                if self.radar_tracks:
+                    radar_tracks = self.radar_tracks[self.index]
+                else:
+                    radar_tracks = None
 
             if planned_path is not None:
                 if planned_path.size > 0:
@@ -298,6 +303,7 @@ class CollectorScenario:
             self._draw_auger(builder)
             self._draw_tracking_targets(tracking_output, builder)
             self._draw_radar_targets(radar_output, builder)
+            self._draw_radar_tracks(radar_tracks, builder)
             self._draw_predicted_paths(builder)
             self._draw_planned_path(builder)
             self._draw_field_definition(builder)
@@ -434,60 +440,25 @@ class CollectorScenario:
             raise e
 
 
-    def _draw_tracking_targets(self, tracking_output, builder: xviz.XVIZBuilder):
-        if tracking_output is None:
+    def _draw_radar_tracks(self, radar_tracks: list, builder: xviz.XVIZBuilder):
+        if radar_tracks is None:
             return
 
         try:
-            if isinstance(tracking_output, dict) and 'tracks' in tracking_output:
-                min_confidence = 0.1
-                min_hits = 2
-                for track in tracking_output['tracks']:
-                    if not track['score'] > min_confidence \
-                            or not track['hitStreak'] > min_hits:
-                        continue
-
-                    (x, y, z) = self.get_object_xyz(track['distance'],
-                                                    track['angle'])
-                    z = 1.
-
-                    if track['radarDistCamFrame'] != self.track_history.get(
-                            track['trackId'], -1) \
-                            and track['radarDistCamFrame'] > 0.1:
-                        fill_color = [0, 255, 0]  # Green
-                    else:
-                        fill_color = [0, 0, 255]  # Blue
-
-                    builder.primitive('/tracking_targets') \
-                        .circle([x, y, z], .5) \
-                        .style({'fill_color': fill_color}) \
-                        .id(track['trackId'])
-
-                    text = f"[{track['classId'][0]}]{track['trackId']}"
-                    builder.primitive('/tracking_id') \
-                            .text(text) \
-                            .position([x, y, z+.1]) \
-                            .id(track['trackId'])
-
-                    self.track_history[track['trackId']] = track['radarDistCamFrame']
-
-            # check if tracking output is from prototype tracking program
-            elif isinstance(tracking_output, list):
-                for track in tracking_output:
+            for track in radar_tracks:
+                if self.smartmicro_radar:
                     track_r = track['state'][0]
                     track_phi = track['state'][2]
                     track_theta = track['state'][4]
                     (x, y, z) = self.get_object_xyz(track_r, track_phi,
                                                     track_theta, radar_ob=True)
-                    if track['is_alive']:
-                        fill_color = [0, 255, 0]  # Green
-                    else:
-                        fill_color = [0, 0, 255]  # Blue
+                    fill_color = [0, 255, 0] \
+                        if track['is_alive'] else [0, 0, 255]
 
                     # d = <cube dimension> / 2, height is determined in collector_meta.py
                     # select d such that it is == <height in collector_meta.py> / 2
                     d = .3
-                    builder.primitive("/smartmicro_radar_targets") \
+                    builder.primitive("/smartmicro_radar_tracks") \
                         .polygon([
                             x-d, y-d, z,
                             x+d, y-d, z,
@@ -495,6 +466,60 @@ class CollectorScenario:
                             x-d, y+d, z,
                         ]) \
                         .style({'fill_color': fill_color}) \
+
+                else:
+                    track_r = track['state'][0]
+                    track_phi = track['state'][2]
+                    (x, y, z) = self.get_object_xyz(track_r, track_phi,
+                                                    radar_ob=True)
+                    z = 1.1
+                    fill_color = [0, 255, 0] \
+                        if track['is_alive'] else [0, 0, 255]
+
+                    builder.primitive('/radar_tracks') \
+                        .circle([x, y, z], .5) \
+                        .style({'fill_color': fill_color}) \
+
+        except Exception as e:
+            print('Crashed in draw tracking targets:', e)
+            raise e
+
+
+    def _draw_tracking_targets(self, tracking_output: dict, builder: xviz.XVIZBuilder):
+        if tracking_output is None:
+            return
+
+        try:
+            min_confidence = 0.1
+            min_hits = 2
+            for track in tracking_output.get('tracks', []):
+                if not track['score'] > min_confidence \
+                        or not track['hitStreak'] > min_hits:
+                    continue
+
+                (x, y, z) = self.get_object_xyz(track['distance'],
+                                                track['angle'])
+                z = 1.
+
+                if track['radarDistCamFrame'] != self.track_history.get(
+                        track['trackId'], -1) \
+                        and track['radarDistCamFrame'] > 0.1:
+                    fill_color = [0, 255, 0]  # Green
+                else:
+                    fill_color = [0, 0, 255]  # Blue
+
+                builder.primitive('/tracking_targets') \
+                    .circle([x, y, z], .5) \
+                    .style({'fill_color': fill_color}) \
+                    .id(track['trackId'])
+
+                text = f"[{track['classId'][0]}]{track['trackId']}"
+                builder.primitive('/tracking_id') \
+                        .text(text) \
+                        .position([x, y, z+.1]) \
+                        .id(track['trackId'])
+
+                self.track_history[track['trackId']] = track['radarDistCamFrame']
 
         except Exception as e:
             print('Crashed in draw tracking targets:', e)
