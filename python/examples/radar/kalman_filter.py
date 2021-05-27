@@ -28,9 +28,10 @@ class KalmanFilter:
         Simplified update equation for P
         (I - K * H) * P
         """
-        # return (np.eye(6) - K @ self.H) @ self.P @ (np.eye(6) - K @ self.H).T \
+        I = np.eye(self.F.shape[0])
+        # return (I - K @ self.H) @ self.P @ (I - K @ self.H).T \
         #         + K @ self.R @ K.T
-        return (np.eye(6) - K @ self.H) @ self.P
+        return (I - K @ self.H) @ self.P
 
     def predict_state(self, X, u):
         """
