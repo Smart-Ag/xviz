@@ -52,12 +52,16 @@ class KalmanFilter:
         """
         return self.P @ self.H.T @ inv(self.H @ self.P @ self.H.T + self.R)
 
-    def update_with_measurement(self, z, u):
+    def estimate(self, z, u, R=None):
         """
         Update X(t) and P(t)
         Predict X(t+1) and P(t+1)
         Return X(t)
         """
+        # update measurement noise matrix if provided
+        if R is not None:
+            self.R = R
+
         # update
         K = self.calculate_kalman_gain()
         X = self.update_state(K, z)
@@ -67,4 +71,16 @@ class KalmanFilter:
         self.X = self.predict_state(X, u)
         self.P = self.predict_estimate_covariance(P)
 
+        return X
+
+    def blind_estimate(self, u):
+        """
+        Update without any measurement
+        Predicted state becomes estimated current state
+
+        Question to whoever is reading this:
+        Should the state estimate covariance matrix be updated here too?
+        """
+        X = self.X.copy()
+        self.X = self.predict_state(X, u)
         return X
