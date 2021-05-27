@@ -55,9 +55,11 @@ class CollectorScenario:
 
         self.global_config = load_global_config(collector_config['MACHINE_TYPE'])
         self.radar_filter = RadarFilter(self.global_config['safety']['radar'])
-        self.cab_to_nose = self.global_config['safety']['object_tracking']['cabin_to_nose_distance']
+        self.cab_to_nose = self.global_config['safety']['object_tracking']\
+            ['cabin_to_nose_distance']
         self.combine_dimensions = self.global_config['safety']['combine_dimensions']
-        self.tractor_gps_to_rear_axle = self.global_config['safety']['tractor_dimensions']['gps_to_rear_axle']
+        self.tractor_gps_to_rear_axle = self.global_config['safety']\
+            ['tractor_dimensions']['gps_to_rear_axle']
         self.header_width = 8.0  # default, gets updated by machine state message
 
         self.tractor_state = dict()
@@ -105,7 +107,8 @@ class CollectorScenario:
                 raise ValueError('payload is empty')
             tracking_output = falconeye_pb2.TrackingOutput()
             tracking_output.ParseFromString(msg.payload)
-            tracking_output = MessageToDict(tracking_output, including_default_value_fields=True)
+            tracking_output = MessageToDict(tracking_output,
+                                            including_default_value_fields=True)
         except Exception as e:
             if isinstance(e, ValueError):
                 tracking_output = None
@@ -468,7 +471,7 @@ class CollectorScenario:
 
                     self.track_history[track['trackId']] = track['radarDistCamFrame']
 
-            # check if tracking output is from prototype tracking program (radar_tracking.py)
+            # check if tracking output is from prototype tracking program
             elif isinstance(tracking_output, list):
                 for track in tracking_output:
                     track_r = track['state'][0]
