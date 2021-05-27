@@ -11,20 +11,39 @@ def get_builder():
         .stream_style({'fill_color': [255, 255, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/radar_passed_filter_targets")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [255, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
+    builder.stream("/radar_tracks")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({'fill_color': [0, 255, 0]})\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/radar_id")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.TEXT)
+
     builder.stream("/smartmicro_radar_targets")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({
             'fill_color': [255, 0, 0],
+            'height': 0.6,
+            'extruded': True,
+        })\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.POLYGON)
+
+    builder.stream("/smartmicro_radar_tracks")\
+        .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
+        .stream_style({
+            'fill_color': [0, 255, 0],
             'height': 0.6,
             'extruded': True,
         })\
@@ -41,6 +60,7 @@ def get_builder():
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/tracking_id")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\
@@ -55,6 +75,7 @@ def get_builder():
         })\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
     builder.stream("/auger")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({
@@ -78,6 +99,7 @@ def get_builder():
         .stream_style({'stroke_color': [0, 128, 128, 128]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
     builder.stream("/predictive_polygons")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'stroke_color': [128, 128, 0, 128]})\
@@ -104,6 +126,7 @@ def get_builder():
         .stream_style({'fill_color': [0, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.TEXT)
+
     builder.stream("/tractor_speed")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\
@@ -115,16 +138,19 @@ def get_builder():
         .stream_style({'fill_color': [0, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.TEXT)
+
     builder.stream("/set_speed")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 0, 0]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.TEXT)
+
     builder.stream("/sync_point")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'fill_color': [0, 128, 30]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.CIRCLE)
+
     builder.stream("/breadcrumbs")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({
@@ -139,6 +165,7 @@ def get_builder():
         .stream_style({'stroke_color': [255, 0, 0, 100]})\
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
     builder.stream("/camera_fov")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'stroke_color': [0, 150, 200, 100]})\
