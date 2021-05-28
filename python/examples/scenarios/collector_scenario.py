@@ -466,6 +466,7 @@ class CollectorScenario:
                             x-d, y+d, z,
                         ]) \
                         .style({'fill_color': fill_color}) \
+                        .id(track['id'])
 
                 else:
                     track_r = track['state'][0]
@@ -479,6 +480,7 @@ class CollectorScenario:
                     builder.primitive('/radar_tracks') \
                         .circle([x, y, z], .5) \
                         .style({'fill_color': fill_color}) \
+                        .id(track['id'])
 
         except Exception as e:
             print('Crashed in draw tracking targets:', e)
