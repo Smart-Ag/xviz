@@ -36,11 +36,7 @@ class Track:
 
     def compute_cost(self, target):
         """
-        Cost is the sum of squared errors between the track state and the target
-        measurement.
-        Ex: C = (x1-x0)**2 + (y1-y0)**2 + (z1-z0)**2
-
-        We might consider adding metadata differences to the cost
+        Cost could be the sum of squared errors of observables states
         """
         raise NotImplementedError()
 
