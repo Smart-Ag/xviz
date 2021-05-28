@@ -101,6 +101,31 @@ class QState:
                 self.steps.append(None)
 
 
+class ThresholdFilter:
+
+    def __init__(self, config):
+        self.config = config
+        self.prev_target_set = None
+
+    def is_valid_target(self, target, sync_status=dict(inSync=False)):
+        ''' Determines if the target is valid or noise based on simple value checks.
+            Returns True if the target is valid.
+        '''
+        if sync_status['inSync']:
+            confidence_threshold = self.config['sync_confidence_threshold']
+            d_bpower_threshold = self.config['sync_d_bpower_threshold']
+            phi_sdv_threshold = self.config['sync_phi_sdv_threshold']
+        else:
+            confidence_threshold = self.config['confidence_threshold']
+            d_bpower_threshold = self.config['d_bpower_threshold']
+            phi_sdv_threshold = self.config['phi_sdv_threshold']
+        if target['pexist'] < confidence_threshold \
+                or target['dBpower'] < d_bpower_threshold \
+                or target['phiSdv'] > phi_sdv_threshold:
+            return False
+        return True
+
+
 class SmartMicroRadarFilter:
 
     def __init__(self, dBpower_threshold=80.):
