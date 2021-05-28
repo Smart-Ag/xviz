@@ -1,6 +1,7 @@
 from enum import Enum
 import numpy as np
 from .kalman_filter import KalmanFilter
+import uuid
 
 
 class TrackType(Enum):
@@ -16,6 +17,7 @@ class Track:
         self.updates_until_alive = updates_until_alive
         self.num_updates = 0
         self.last_updated = 0  # iterations since last updated by a target
+        self.id = str(uuid.uuid4())
 
     def initialize_kalman_filter(self, dt):
         raise NotImplementedError()
@@ -72,6 +74,7 @@ class Track:
         return {
             'state': self.get_state().tolist(),
             'is_alive': self.is_alive,
+            'id': self.id,
         }
 
 
