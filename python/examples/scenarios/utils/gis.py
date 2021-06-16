@@ -60,6 +60,11 @@ def lonlat_to_utm(lon, lat, zone):
     return converted[0], converted[1]  # only return easting, northing
 
 
+def poly_buffer(poly, buffer_size):
+    """Buffer a polygon by given size."""
+    return poly.buffer(buffer_size, 1, cap_style=2, join_style=2)
+
+
 def parse_utm_zone(zone):
     if not zone:
         return None, None
