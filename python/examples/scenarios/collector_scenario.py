@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 import numpy as np
 import cv2
+import json
 
 from google.protobuf.json_format import MessageToDict
 from protobuf_APIs import falconeye_pb2, radar_pb2
@@ -13,7 +14,7 @@ from scenarios.utils.filesystem import get_collector_instances, load_config, \
     load_global_config
 from scenarios.utils.gis import transform_combine_to_local, get_combine_region, \
     get_auger_region, utm_array_to_local, lonlat_array_to_local, \
-    lonlat_to_utm, get_wheel_angle
+    lonlat_to_utm, get_wheel_angle, poly_buffer
 from scenarios.utils.image import draw_cam_targets_on_image, show_image, \
     make_image_collage
 from scenarios.utils.read_protobufs import deserialize_collector_output, \
@@ -24,8 +25,9 @@ from scenarios.safety_subsystems.radar_filter import RadarFilter, \
 from scenarios.safety_subsystems.path_prediction import get_path_distances, \
     get_path_poly, predict_path
 
-import xviz_avs as xviz
+from shapely.geometry import shape, mapping
 
+import xviz_avs as xviz
 
 class CollectorScenario:
 
@@ -58,6 +60,7 @@ class CollectorScenario:
         self.combine_dimensions = self.global_config['safety']['combine_dimensions']
         self.tractor_gps_to_rear_axle = self.global_config['safety']['tractor_dimensions']['gps_to_rear_axle']
         self.header_width = 8.0  # default, gets updated by machine state message
+        self.obsticle_buffer = self.global_config['navigation']['obstacle_buffer']
 
         self.tractor_state = dict()
         self.tractor_easting = None
@@ -731,28 +734,41 @@ class CollectorScenario:
 
         try:
             poly = []
-            if self.field_definition['type'] == 'MultiPolygon':
-                for polygons in self.field_definition['coordinates']:
-                    for polygon in polygons:
+            field_poly = shape(self.field_definition)
+            temp = json.loads(json.dumps(mapping(field_poly)))
+
+            for is_planning_map in [False, True]:
+
+                if is_planning_map:
+                    temp = json.loads(json.dumps(mapping(poly_buffer(field_poly, buffer_size=-self.obsticle_buffer))))
+
+                if temp['type'] == 'MultiPolygon':
+                    for polygons in temp['coordinates']:
+                        for polygon in polygons:
+                            poly.append(np.array(polygon))
+
+                else:
+                    for polygon in temp['coordinates']:
                         poly.append(np.array(polygon))
 
-            else:
-                for polygon in self.field_definition['coordinates']:
-                    poly.append(np.array(polygon))
+                for p in poly:
+                    utm_coords = np.array(p)
+                    utm_coords[:, 0] -= self.tractor_easting
+                    utm_coords[:, 1] -= self.tractor_northing
 
-            for p in poly:
-                utm_coords = np.array(p)
-                utm_coords[:, 0] -= self.tractor_easting
-                utm_coords[:, 1] -= self.tractor_northing
+                    z = 0.3
+                    vertices = list(np.column_stack(
+                        (utm_coords, np.full(utm_coords.shape[0], z))
+                    ).flatten())
 
-                z = 0.3
-                vertices = list(np.column_stack(
-                    (utm_coords, np.full(utm_coords.shape[0], z))
-                ).flatten())
-
-                builder.primitive('/field_definition') \
-                    .polyline(vertices) \
-                    .id('field_definition')
+                    if is_planning_map:
+                        builder.primitive('/planning_map') \
+                            .polyline(vertices) \
+                            .id('planning_map')
+                    else:   
+                        builder.primitive('/field_definition') \
+                            .polyline(vertices) \
+                            .id('field_definition')
 
         except Exception as e:
             print('Crashed in draw field definition:', e)

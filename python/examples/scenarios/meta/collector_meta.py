@@ -73,6 +73,15 @@ def get_builder():
         .category(xviz.CATEGORY.PRIMITIVE)\
         .type(xviz.PRIMITIVE_TYPES.POLYLINE)
 
+    builder.stream("/planning_map")\
+        .coordinate(xviz.COORDINATE_TYPES.IDENTITY)\
+        .stream_style({
+            'stroke_color': [0, 0, 255, 128],
+            'stroke_width': 0.3,
+        })\
+        .category(xviz.CATEGORY.PRIMITIVE)\
+        .type(xviz.PRIMITIVE_TYPES.POLYLINE)
+
     builder.stream("/vision_polygons")\
         .coordinate(xviz.COORDINATE_TYPES.VEHICLE_RELATIVE)\
         .stream_style({'stroke_color': [0, 128, 128, 128]})\
