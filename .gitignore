@@ -1,4 +1,4 @@
-/data
+/**/*.mp4
 node_modules
 dist
 python/examples/scenarios/tmp/
@@ -20,3 +20,4 @@ package-lock.json
 .npmrc
 .dir-locals.el
 python/temp_out/*.jpeg
+python/examples/scenarios/data/5_go.mp4

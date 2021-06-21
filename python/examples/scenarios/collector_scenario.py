@@ -39,6 +39,8 @@ class CollectorScenario:
         self.index = 0
         self.data = []
         self.track_history = {}
+        self.IMAGE_Q = []
+        self.skip_to = 0
 
         configfile = Path(__file__).parent / 'collector-scenario-config.yaml'
         collector_config = load_config(str(configfile))
@@ -137,7 +139,35 @@ class CollectorScenario:
             self._draw_measuring_references(builder, timestamp)
             self._draw_collector_instance(builder, timestamp)
             data = builder.get_message()
+            
+            self.IMAGE_Q = self.IMAGE_Q[-5:]
 
+            if len(self.IMAGE_Q) == 5 and self.index >= self.skip_to:
+                LABEL_DICT = {
+                    1: "go",
+                    2: "caution",
+                    3: "stop"
+                }
+                label = input("1=GO,2=CAUTION,3=STOP")
+                print("label for images is:", label)
+
+                if label is 'n':
+                    self.skip_to = self.index + int(input("amt"))
+                    self.IMAGE_Q = []
+                else:
+                    height,width,layers = self.IMAGE_Q[0].shape
+
+                    video=cv2.VideoWriter(
+                        f'/home/azizalibasic/Documents/dev/sa/viz/xviz/python/examples/scenarios/data/{self.index}_{LABEL_DICT[int(label)]}.mp4',
+                        cv2.VideoWriter_fourcc(*'DIVX'), 
+                        15,
+                        (width, height)
+                    )
+                    for i in range(len( self.IMAGE_Q)):
+                        video.write( self.IMAGE_Q[i])
+                    video.release()
+
+                    self.IMAGE_Q = []
             return {
                 'type': 'xviz/state_update',
                 'data': data.to_object()
@@ -330,6 +360,8 @@ class CollectorScenario:
                 primary_img = draw_cam_targets_on_image(primary_img,
                                                         primary_output)
                 self._draw_camera_targets(primary_output, builder)
+
+                self.IMAGE_Q.append(primary_img)
 
                 if self.show_haz_cams:
                     for cam_idx, (img, cam_output) in camera_data.items():
@@ -805,9 +837,10 @@ class CollectorScenario:
             return
 
         try:
+
             sync_x_rel_combine = self.sync_params['sync_point'][0] \
                 + self.sync_params['sync_dx']
-            sync_y_rel_combine = self.sync_params['sync_point'][1] \
+            sync_y_rel_combine = self.sync_params['sync_point'][1] + 2 \
                 + self.sync_params['sync_dy']
             sync_x = self.combine_x \
                 + sync_x_rel_combine * math.cos(self.combine_relative_theta) \
@@ -820,6 +853,8 @@ class CollectorScenario:
             builder.primitive('/sync_point') \
                 .circle([sync_x, sync_y, z], .3) \
                 .id('sync point')
+
+            
 
             if self.sync_params['breadcrumbs']:
                 breadcrumbs_xy = lonlat_array_to_local(
