@@ -66,7 +66,7 @@ class CollectorScenario:
         self.tractor_easting = None
         self.tractor_northing = None
         self.tractor_theta = None
-        self.dampended_wheel_angle = 0.
+        self.dampened_wheel_angle = 0.
         self.combine_states = dict()
         self.combine_x = None
         self.combine_y = None
@@ -852,8 +852,8 @@ class CollectorScenario:
                     wheel_angle = get_wheel_angle(
                         state['curvature'],
                         self.global_config['guidance']['wheel_base'])
-                    self.dampended_wheel_angle += (
-                        wheel_angle - self.dampended_wheel_angle) * 0.3
+                    self.dampened_wheel_angle += (
+                        wheel_angle - self.dampened_wheel_angle) * 0.3
                 else:
                     self.combine_states[vehicle] = state
 
