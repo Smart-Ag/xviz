@@ -516,7 +516,7 @@ class CollectorScenario:
                     combine_relative_theta,
                     self.combine_dimensions['body_width'],
                     self.combine_dimensions['header_length'],
-                    self.header_width + 1.0,
+                    self.header_width,
                     self.combine_dimensions['gps_to_header'],
                     self.combine_dimensions['gps_to_back'])
 
