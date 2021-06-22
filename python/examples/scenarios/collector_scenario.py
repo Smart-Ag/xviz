@@ -66,6 +66,7 @@ class CollectorScenario:
         self.tractor_easting = None
         self.tractor_northing = None
         self.tractor_theta = None
+        self.dampended_wheel_angle = 0.
         self.combine_states = dict()
         self.combine_x = None
         self.combine_y = None
@@ -583,15 +584,11 @@ class CollectorScenario:
                 sync_slowdown_threshold, _waypoint_slowdown_threshold \
                 = get_path_distances(veh_speed, self.global_config['safety'])
 
-            wheel_angle = get_wheel_angle(
-                self.tractor_state['curvature'],
-                self.global_config['guidance']['wheel_base'])
-
             self._draw_predictive_polygons(
-                veh_speed, wheel_angle, sync_stop_threshold,
+                veh_speed, self.dampened_wheel_angle, sync_stop_threshold,
                 sync_slowdown_threshold, builder)
             self._draw_vision_polygons(
-                veh_speed, wheel_angle, sync_stop_threshold,
+                veh_speed, self.dampened_wheel_angle, sync_stop_threshold,
                 waypoint_stop_threshold, builder)
 
         except Exception as e:
@@ -852,6 +849,11 @@ class CollectorScenario:
             for vehicle, state in vehicle_states.items():
                 if vehicle == 'tractor':
                     self.tractor_state = state
+                    wheel_angle = get_wheel_angle(
+                        state['curvature'],
+                        self.global_config['guidance']['wheel_base'])
+                    self.dampended_wheel_angle += (
+                        wheel_angle - self.dampended_wheel_angle) * 0.3
                 else:
                     self.combine_states[vehicle] = state
 
