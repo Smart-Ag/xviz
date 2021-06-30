@@ -1,8 +1,9 @@
 #collector_output_file: /home/azizalibasic/Downloads/important/south-aftrica-2021/jun-14-21-pred-stops/Predictive_stop-v2020-25-0-84a4062280604d68a2fff0d51017f2d8-smartag-autocart-1623668564270-529.tar
-collector_output_file: /home/azizalibasic/Downloads/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1617039948560-6018.tar
+# collector_output_file: /home/azizalibasic/Downloads/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1617039948560-6018.tar
 extract_directory: /home/azizalibasic/Downloads/temp_collector/
+collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/6-30-21/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625067457081-1111.tar
 mqtt_enabled: False
-MACHINE_TYPE: 2020_DOT_AU1_NARROW
+MACHINE_TYPE: 8RIVT_WHEEL
 show_haz_cams: False
 all_imgs_equal_size: False
 smartmicro_radar: False

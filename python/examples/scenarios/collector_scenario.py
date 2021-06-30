@@ -29,6 +29,52 @@ from shapely.geometry import shape, mapping
 
 import xviz_avs as xviz
 
+ErrorCodes = {
+     "0": 'Good',
+     "1": 'Offline',
+     "2": 'Radar_hw_fail',
+     "3": 'Radar_sw_fail',
+     "4": 'Radar_sensor_blind',
+     "5": 'Radar_can_fail',
+     "6": 'Radar_sensor_not_safe',
+     "7": 'Radar_object_detection', ##
+     "8": 'Communication_timeout',
+     "9": 'Bad_machine_state',
+     "10": 'Object_detection', ##
+     "11": 'CommunicationError',
+     "13": 'InvalidFieldPolygon',
+     "12": 'SubsystemNotConnected',
+     "15": 'HazardCameraObjectDetection',
+     "16": 'StaleHazardCameraTargets',
+     "17": 'HazardCameraTimeout',
+     "18": 'HazardCameraFail',
+     "19": 'MissingHazardCameraIndex',
+     "20": 'BadStatus',
+     "21": 'OtherStateCommLatency',
+     "22": 'MachineStateCommLatency',
+     "101" : 'GeoFenceOutOfBound',
+     "102" : 'GeoFenceNoFieldDefinition',
+     "201" : 'Tib_main_fail',
+     "202" : 'Tib_redun_fail',
+     "203" : 'Bypass_pressed',
+     "204" : 'Steering_fail',
+     "205" : 'Estop_pressed',
+     "206" : 'Speed_fail',
+     "207" : 'Gear_fail',
+     "208" : 'Curvature_fail',
+     "301" : 'UIHeartbeatTimeout',
+     "302" : 'UIHeartbeatInvalidTimestamp',
+     "401" : 'CameraTimeout',
+     "402" : 'CameraInvalidTimestamp',
+     "403" : 'CameraFail',
+     "501" : 'Predictive_stop',
+     "502" : 'Predictive_slowdown',
+     "503" : 'No_field_definition',
+     "504" : 'CombineGpsFail',
+     "601" : 'SoftwareFail',
+    
+}
+
 class CollectorScenario:
 
     def __init__(self, live=True, duration=10):
@@ -40,6 +86,7 @@ class CollectorScenario:
         self.data = []
         self.track_history = {}
         self.IMAGE_Q = []
+        self.GANDALF_RESPONSE_Q = []
         self.skip_to = 0
 
         configfile = Path(__file__).parent / 'collector-scenario-config.yaml'
@@ -130,6 +177,26 @@ class CollectorScenario:
 
         return metadata
 
+    def is_gandalf_stop(self):
+        # Stop | Caution
+        for gand_resp in self.GANDALF_RESPONSE_Q:
+            if gand_resp is None or len(gand_resp) < 2:
+                continue
+
+            # see if we have a response that is 0 or 1
+            is_stop_or_caution = gand_resp[0] == '0' or gand_resp[1] == '1'
+            if is_stop_or_caution:
+                
+                is_radar_or_tracking_stop = False
+                for resp_ss in gand_resp[1:]:
+                    is_radar = resp_ss == "7"
+                    is_tracking = resp_ss == "10"
+
+                    is_radar_or_tracking_stop = is_radar or is_tracking
+                    if is_radar_or_tracking_stop:
+                        return is_radar_or_tracking_stop
+
+        return False
 
     def get_message(self, time_offset):
         try:
@@ -141,15 +208,27 @@ class CollectorScenario:
             data = builder.get_message()
             
             self.IMAGE_Q = self.IMAGE_Q[-5:]
+            self.GANDALF_RESPONSE_Q = self.GANDALF_RESPONSE_Q[-6:]
 
-            if len(self.IMAGE_Q) == 5 and self.index >= self.skip_to:
+            print("self.GANDALF_RESPONSE_Q:", self.GANDALF_RESPONSE_Q)
+
+            any_gandalf_label = any([True if x is not None else False for x in self.GANDALF_RESPONSE_Q]) \
+                and len(self.GANDALF_RESPONSE_Q) >= 6
+
+            if any_gandalf_label and len(self.IMAGE_Q) == 5 and self.index >= self.skip_to:
                 LABEL_DICT = {
-                    1: "go",
-                    2: "caution",
-                    3: "stop"
+                    0: "stop",
+                    1: "caution",
+                    2: "clear",
+                    3: "offline",
                 }
-                label = input("1=GO,2=CAUTION,3=STOP")
-                print("label for images is:", label)
+                
+                label = 2
+
+                if self.is_gandalf_stop():
+                    label = 0
+
+                print("\t :::::::::::::::::label:", label)
 
                 if label is 'n':
                     self.skip_to = self.index + int(input("amt"))
@@ -232,6 +311,7 @@ class CollectorScenario:
                 print("#############################WE FINISHED#################################")
                 print("#############################WE FINISHED#################################")
                 print("#############################WE FINISHED#################################\n")
+                raise Exception("FINISHED")
 
             collector_output = self.collector_instances[self.index]
 
@@ -239,7 +319,8 @@ class CollectorScenario:
             if is_slim_output:
                 camera_data, radar_output, tracking_output, \
                     machine_state, field_definition, planned_path, \
-                    sync_status, control_signal, sync_params \
+                    sync_status, control_signal, sync_params, \
+                    gandalf_response \
                     = extract_collector_output_slim(collector_output)
             else:
                 print('collector file is using old proto definition')
@@ -251,6 +332,7 @@ class CollectorScenario:
                 sync_status = None
                 control_signal = None
                 sync_params = None
+                gandalf_response = None
 
             if machine_state is not None:
                 self.update_machine_state(machine_state)
@@ -325,7 +407,7 @@ class CollectorScenario:
             self._draw_control_signal(builder)
             self._draw_sync_status(builder)
             self._draw_sync_params(builder)
-            self._show_images(camera_data, builder)
+            self._show_images(camera_data, gandalf_response, builder)
 
             # if self.index == 0:
             #     print('start time:', time.gmtime(float(collector_output.timestamp)))
@@ -339,7 +421,7 @@ class CollectorScenario:
             raise e
 
 
-    def _show_images(self, camera_data, builder: xviz.XVIZBuilder):
+    def _show_images(self, camera_data, gandalf_response, builder: xviz.XVIZBuilder):
         """
         Draws the camera targets on the images for each camera and displays all
         the images as a table
@@ -357,11 +439,12 @@ class CollectorScenario:
                     return
 
                 primary_img, primary_output = camera_data[0]
-                primary_img = draw_cam_targets_on_image(primary_img,
-                                                        primary_output)
-                self._draw_camera_targets(primary_output, builder)
+                #primary_img = draw_cam_targets_on_image(primary_img,
+                #                                        primary_output)
+                #self._draw_camera_targets(primary_output, builder)
 
                 self.IMAGE_Q.append(primary_img)
+                self.GANDALF_RESPONSE_Q.append(gandalf_response)
 
                 if self.show_haz_cams:
                     for cam_idx, (img, cam_output) in camera_data.items():

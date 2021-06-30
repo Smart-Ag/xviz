@@ -160,12 +160,22 @@ def extract_collector_output_slim(collector_output, get_camera_data=True,
                 print('missing primary camera frame from collector output')
                 frame = None
 
+        gandalf_response = None
+        if 'collector/data/gandalf-response' in collector_output.data:
+            gandalf_response = collector_output.data['collector/data/gandalf-response'].decode("utf-8").strip()
+            if gandalf_response.endswith("_"):
+                gandalf_response = gandalf_response[:-1]
+            gandalf_response = gandalf_response.split('_')
+            print("gandalf_response: [{0}]".format(collector_output.data['collector/data/gandalf-response'].decode("utf-8")))
+            del collector_output.data['collector/data/gandalf-response']
+
+
     except Exception as e:
         print('failed to extract collector output:', e)
         raise e
 
     return camera_data, radar_output, tracking_output, machine_state, \
-            field_definition, planned_path, sync_status, control_signal, sync_params
+            field_definition, planned_path, sync_status, control_signal, sync_params, gandalf_response
 
 
 def extract_collector_output(collector_output):
