@@ -1,0 +1,32 @@
+FROM 407636574581.dkr.ecr.us-east-2.amazonaws.com/python:3.6.4-slim-stretch
+
+ENV DISPLAY=:0.0  
+
+ENV QT_X11_NO_MITSHM=1
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+EXPOSE 8081
+
+WORKDIR /xviz
+
+RUN ls
+
+# update
+RUN apt-get update
+
+RUN apt-get install curl git gcc libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev -y
+
+RUN apt-get install lightdm -y
+
+RUN pip install --upgrade pip setuptools wheel
+
+RUN pip install google
+
+COPY . /xviz
+
+RUN cd python && bash setup.sh
+
+RUN service lightdm start
+
+CMD python python/examples/serve_scenarios.py
