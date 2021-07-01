@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import json
+import os
 
 from google.protobuf.json_format import MessageToDict
 from protobuf_APIs import falconeye_pb2, radar_pb2
@@ -97,6 +98,9 @@ class CollectorScenario:
         self.collector_instances = get_collector_instances(
             collector_output_file, extract_directory)
 
+        self.file_name = os.path.basename(collector_config['collector_output_file']).replace(".tar", "")
+        self.auto_labeler_out_path = collector_config['auto_labeler_out_path']
+
         self.mqtt_enabled = collector_config['mqtt_enabled']
         if self.mqtt_enabled:
             self.mqtt_tracking_outputs = []
@@ -184,13 +188,16 @@ class CollectorScenario:
                 continue
 
             # see if we have a response that is 0 or 1
-            is_stop_or_caution = gand_resp[0] == '0' or gand_resp[1] == '1'
+            is_stop_or_caution = gand_resp[0] == '0' or gand_resp[0] == '1'
+            # print("\t \t :::::::::::: is_stop_or_caution:", is_stop_or_caution)
             if is_stop_or_caution:
                 
                 is_radar_or_tracking_stop = False
                 for resp_ss in gand_resp[1:]:
                     is_radar = resp_ss == "7"
                     is_tracking = resp_ss == "10"
+                    # print("\t \t :::::::::::: is_radar:", is_radar)
+                    # print("\t \t :::::::::::: is_tracking:", is_tracking)
 
                     is_radar_or_tracking_stop = is_radar or is_tracking
                     if is_radar_or_tracking_stop:
@@ -228,7 +235,7 @@ class CollectorScenario:
                 if self.is_gandalf_stop():
                     label = 0
 
-                print("\t :::::::::::::::::label:", label)
+                # print("\t :::::::::::::::::label:", label)
 
                 if label is 'n':
                     self.skip_to = self.index + int(input("amt"))
@@ -236,8 +243,12 @@ class CollectorScenario:
                 else:
                     height,width,layers = self.IMAGE_Q[0].shape
 
+                    video_out_path = os.path.join(
+                        self.auto_labeler_out_path,
+                        f'{self.file_name}-{self.index}_{LABEL_DICT[int(label)]}.mp4'
+                    )
                     video=cv2.VideoWriter(
-                        f'/home/azizalibasic/Documents/dev/sa/viz/xviz/python/examples/scenarios/data/{self.index}_{LABEL_DICT[int(label)]}.mp4',
+                        video_out_path,
                         cv2.VideoWriter_fourcc(*'DIVX'), 
                         15,
                         (width, height)

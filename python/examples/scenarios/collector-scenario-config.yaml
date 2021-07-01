@@ -1,7 +1,14 @@
 #collector_output_file: /home/azizalibasic/Downloads/important/south-aftrica-2021/jun-14-21-pred-stops/Predictive_stop-v2020-25-0-84a4062280604d68a2fff0d51017f2d8-smartag-autocart-1623668564270-529.tar
 # collector_output_file: /home/azizalibasic/Downloads/00-v2020-25-0-3691020dae1046df88e855e6d9928fca-dot-misc-1617039948560-6018.tar
 extract_directory: /home/azizalibasic/Downloads/temp_collector/
-collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/6-30-21/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625067457081-1111.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625082231674-3239.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625082673451-3950.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625083154252-3146.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625083582804-2592.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625083582804-2592.tar
+# collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625084354151-5779.tar
+collector_output_file: /home/azizalibasic/Downloads/important/deep-gandalf-data/vanwall/00-v2020-25-0-d74898c5512249799a87080554a459f1-smartag-autocart-1625085106999-5679.tar
+auto_labeler_out_path: /home/azizalibasic/Documents/dev/sa/viz/xviz/python/examples/scenarios/data/
 mqtt_enabled: False
 MACHINE_TYPE: 8RIVT_WHEEL
 show_haz_cams: False

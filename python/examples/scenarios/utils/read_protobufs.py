@@ -166,7 +166,7 @@ def extract_collector_output_slim(collector_output, get_camera_data=True,
             if gandalf_response.endswith("_"):
                 gandalf_response = gandalf_response[:-1]
             gandalf_response = gandalf_response.split('_')
-            print("gandalf_response: [{0}]".format(collector_output.data['collector/data/gandalf-response'].decode("utf-8")))
+            # print("gandalf_response: [{0}]".format(collector_output.data['collector/data/gandalf-response'].decode("utf-8")))
             del collector_output.data['collector/data/gandalf-response']
 
 
