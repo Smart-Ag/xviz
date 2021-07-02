@@ -1,4 +1,9 @@
 collector_output_file: '/xviz/Radar_object_detection-v2020-25-0-0bbd888528064bbbb1f3852ea9dda39d-smartag-autocart-1618820911312-498.tar'
+
+x-special/nautilus-clipboard
+copy
+file:///home/parallels/Desktop/Raven/xviz/Radar_object_detection-v2020-25-0-0bbd888528064bbbb1f3852ea9dda39d-smartag-autocart-1618820911312-498%20(1).tar
+
 extract_directory: '/xviz/tmp'
 mqtt_enabled: False
 MACHINE_TYPE: 8RIVT_WHEEL
