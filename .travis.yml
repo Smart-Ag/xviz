@@ -23,7 +23,7 @@ install:
   - cp .netrc ~/.netrc
   - export PATH=$PATH:$HOME/.local/bin # put aws in the path
   - eval $(aws ecr get-login --region us-east-2 --no-include-email)
-  - git submodule update --init --recursive
+  - git submodule update --init --recursive || travis_terminate 1
   - cd html
   - npm install
   - cd ..
@@ -33,5 +33,14 @@ before_script:
   - /bin/bash release_management.sh check_release_version mc_ui 2 3 4 || travis_terminate 1
 
 script:
- - docker build -f Dockerfile.server -t 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest .      
+  # run the ui tests
+  - cd html
+  - npm run lint || travis_terminate 1
+  - npm run test || travis_terminate 1
+  - npm run test:coverage || travis_terminate 1
+  - cd ..
+  - ./deploy.sh
+  # run the tests
+  # - docker-compose up --exit-code-from mc-ui || travis_terminate 1;
+  - docker build -f Dockerfile.server -t 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest .      
   - docker push 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest
