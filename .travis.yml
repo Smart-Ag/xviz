@@ -17,14 +17,13 @@ services:
   - docker
 
 install: 
-  - travis encrypt 'GIT_NAME="alexhaislip" GIT_EMAIL="haislipalexander@gmail.com" GH_TOKEN=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'
   - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   - docker --version
   - pip install awscli
   - cp .netrc ~/.netrc
   - export PATH=$PATH:$HOME/.local/bin # put aws in the path
-  - eval $(aws ecr get-login --region us-east-2 --no-include-email)
   - git submodule update --init --recursive || travis_terminate 1
+  - eval $(aws ecr get-login --region us-east-2 --no-include-email)
   - cd html
   - npm install
   - cd ..
