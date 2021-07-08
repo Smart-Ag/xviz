@@ -1,20 +1,37 @@
 sudo: required
-services:
-  - docker
-dist: trusty
-language: python
+
+language:
+  python
+
 python:
   - "3.6"
-notifications:
-  email: false
+
+# we'll handle submodules ourselves
+git:
+  submodules: false
+
+env:
+  - CI=true
+
+services:
+  - docker
 
 install:
-   # need aws to pull smarthp-hardwaresim docker image
-   - pip install --upgrade pip==20.2.3
-   - pip install awscli flake8==3.5.0 pyyaml pytest
-   - export PATH=$PATH:$HOME/.local/bin # put aws in the path
-   - eval $(aws ecr get-login --region us-east-2 --no-include-email)
+  - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  - docker --version
+  - pip install awscli
+  - cp .netrc ~/.netrc
+  - export PATH=$PATH:$HOME/.local/bin # put aws in the path
+  - eval $(aws ecr get-login --region us-east-2 --no-include-email)
+  - git submodule update --init --recursive || travis_terminate 1
+  - cd html
+  - npm install
+  - cd ..
+
+before_script:
+  - export NODE_OPTIONS=--max_old_space_size=4096
+  - /bin/bash release_management.sh check_release_version mc_ui 2 3 4 || travis_terminate 1
 
 script:
-  - docker build -f Dockerfile.server -t 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest .      
+ - docker build -f Dockerfile.server -t 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest .      
   - docker push 407636574581.dkr.ecr.us-east-2.amazonaws.com/xviz:latest
