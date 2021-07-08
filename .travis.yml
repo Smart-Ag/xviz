@@ -10,23 +10,15 @@ python:
 git:
   submodules: false
 
-env:
-  - CI=true
-
 services:
   - docker
 
-install: 
-  - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-  - docker --version
-  - pip install awscli
+install:
   - cp .netrc ~/.netrc
+  - git submodule update --init --recursive
+  - pip install awscli
   - export PATH=$PATH:$HOME/.local/bin # put aws in the path
-  - git submodule update --init --recursive || travis_terminate 1
   - eval $(aws ecr get-login --region us-east-2 --no-include-email)
-  - cd html
-  - npm install
-  - cd ..
 
 before_script:
   - export NODE_OPTIONS=--max_old_space_size=4096
