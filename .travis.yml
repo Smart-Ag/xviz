@@ -23,7 +23,7 @@ install:
   - cp .netrc ~/.netrc
   - export PATH=$PATH:$HOME/.local/bin # put aws in the path
   - eval $(aws ecr get-login --region us-east-2 --no-include-email)
-  - git submodule update --init --recursive || travis_terminate 1
+  - git submodule update --init --recursive
   - cd html
   - npm install
   - cd ..
